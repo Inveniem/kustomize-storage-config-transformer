@@ -8,6 +8,7 @@ in deployment manifests.
 
 For example, given a base deployment manifest like this:
 ```yaml
+# base/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -71,10 +72,31 @@ spec:
             - containerPort: 5000
 ```
 
-And a storage config like this:
+A Kustomization config like this:
 ```yaml
-# overlays/live/storage.yaml
-dynamicVolumeProfiles:
+# overlays/live/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+transformers:
+  - configure-storage.yaml
+```
+
+And a KST plugin config like this:
+```yaml
+# overlays/live/configure-storage.yaml
+apiVersion: storage-config-transformer.kubernetes.inveniem.com/v1
+kind: StorageConfigTransformer
+metadata:
+  name: storage-config-transformer
+  annotations:
+    config.kubernetes.io/function: |
+      container:
+        image: inveniem/kustomize-storage-transformer:latest
+spec:
   - permutations:
       - values:
           - sample-project1
@@ -147,7 +169,7 @@ dynamicVolumeProfiles:
                 claimName: "<<DYNAMIC>>"
 ```
 
-Produces the following deployment manifest:
+This should produce the following deployment manifest:
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
