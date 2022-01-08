@@ -113,7 +113,7 @@ spec:
           - ReadWriteMany
         azureFile:
           secretName: "myapp-azure-files-creds"
-          shareName: "<<DYNAMIC>>"
+          shareName: "<<INJECTED>>"
       name:
         prefix: "pv-myapp-live-"
         suffix: ~
@@ -130,7 +130,7 @@ spec:
         resources:
           requests:
             storage: 1Ti
-        volumeName: "<<DYNAMIC>>"
+        volumeName: "<<INJECTED>>"
       name:
         prefix: pvc-
         suffix: ~
@@ -147,7 +147,7 @@ spec:
         volumeTemplates:
           - mergeSpec:
               persistentVolumeClaim:
-                claimName: "<<DYNAMIC>>"
+                claimName: "<<INJECTED>>"
             name:
               prefix: "vol-"
               suffix: ~
@@ -158,7 +158,7 @@ spec:
 
         volumeMountTemplates:
           - mergeSpec:
-              mountPath: "<<DYNAMIC>>"
+              mountPath: "<<INJECTED>>"
             name:
               prefix: "vol-mnt-"
               suffix: ~
@@ -167,6 +167,11 @@ spec:
                 prefix: "/mnt/share/"
                 suffix: ~
 ```
+_(Above, there is nothing special about `<<INJECTED>>` as a value; it's just
+being used to make it easier to visualize where the injected values will go in
+the output template. Keys that have that value in this example could actually
+have been omitted entirely, and the corresponding value would still be created
+and populated by the `injectedValues`.)_
 
 This would produce the following deployment manifest:
 ```yaml
