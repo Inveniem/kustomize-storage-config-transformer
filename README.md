@@ -137,11 +137,10 @@ spec:
           prefix: "pv-myapp-live-"
           suffix: ~
 
-    volumeMountTemplates:
+    containerVolumeTemplates:
       - containers:
           - name: frontend-myapp
           - name: backend-myapp-api
-
 
         volumeTemplates:
           - mergeSpec:
@@ -155,7 +154,7 @@ spec:
                 prefix: "pvc-"
                 suffix: ~
 
-        mountTemplates:
+        volumeMountTemplates:
           - mergeSpec:
               mountPath: "<<DYNAMIC>>"
             name:

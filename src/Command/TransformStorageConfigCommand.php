@@ -42,9 +42,9 @@ class TransformStorageConfigCommand extends Command {
   const CONFIG_KEY_PVCS = 'persistentVolumeClaimTemplate';
 
   /**
-   * Config. key that specifies the template for volume mounts.
+   * Config. key that specifies the template for container mounts of volumes.
    */
-  const CONFIG_KEY_VOLUME_MOUNTS = 'volumeMountTemplates';
+  const CONFIG_KEY_CONTAINER_VOLUMES = 'containerVolumeTemplates';
 
   /**
    * Config. key under permutations that specifies the permutation values.
@@ -66,8 +66,8 @@ class TransformStorageConfigCommand extends Command {
       'function'  => 'applyPersistentVolumeClaimTransforms',
     ],
     [
-      'configKey' => self::CONFIG_KEY_VOLUME_MOUNTS,
-      'function'  => 'applyVolumeMountTransforms',
+      'configKey' => self::CONFIG_KEY_CONTAINER_VOLUMES,
+      'function'  => 'applyContainerVolumeTransforms',
     ],
   ];
 
@@ -408,10 +408,14 @@ class TransformStorageConfigCommand extends Command {
   }
 
   /**
-   * Applies transformations for all container mounts and volumeMounts.
+   * Applies transformations for container-related volumes and volume mounts.
    *
-   * The volume template is repeated and customized for each permutation value,
-   * while the mount template.
+   * Whenever a resource that references one of the containers in the list is
+   * encountered, it is modified to include one volume for each permutation,
+   * using the volume template specified in the transformation function
+   * configuration. Then, each matching container is modified to include to
+   * include a volume mount for each permutation, using the volume mount
+   * template specified in the transformation function configuration.
    *
    * @param array $input_manifests
    *   An associative array representing the Kubernetes resource manifests to
@@ -432,9 +436,9 @@ class TransformStorageConfigCommand extends Command {
    *
    * @noinspection PhpUnused
    */
-  function applyVolumeMountTransforms(array $input_manifests,
-                                      array $permutation_values,
-                                      array $function_config): array {
+  function applyContainerVolumeTransforms(array $input_manifests,
+                                          array $permutation_values,
+                                          array $function_config): array {
     return $input_manifests;
   }
 
