@@ -11,26 +11,29 @@ use Symfony\Component\Process\Exception\RuntimeException;
 use Symfony\Component\Process\Process;
 
 /**
- * A generator command for Kustomize for modifying Kubernetes storage mounts.
+ * A transformer plug-in for Kustomize for modifying Kubernetes storage mounts.
+ *
+ * Takes in a resource list of deployment manifests and outputs modified
+ * manifests that can include persistent volumes (PV), persistent volume
+ * claims (PVC), and volume mounts that reference the PVCs.
  */
-class GenerateStorageConfigCommand extends Command {
+class TransformStorageConfigCommand extends Command {
 
   /**
    * The name of this command.
    *
    * @var string
    */
-  protected static $defaultName = 'generate-storage-config';
+  protected static $defaultName = 'transform-storage-config';
 
   /**
    * {@inheritdoc}
    */
   protected function configure() {
     $this
-      ->setDescription('Generates storage configuration for Kustomize')
+      ->setDescription('Transform storage configuration for Kustomize')
       ->setHelp(
-        'Generates Kubernetes deployment manifests to configure storage for '.
-        'applications.'
+        'Transforms Kubernetes deployment manifests to configure storage.'
       );
   }
 

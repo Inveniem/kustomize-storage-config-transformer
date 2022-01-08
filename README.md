@@ -1,10 +1,10 @@
-# Kustomize Storage Config Generator
+# Kustomize Storage Config Transformer
 As a DevOps professional who is hosting the same containerized software for
 multiple tenants on the same Kubernetes infrastructure and who needs to keep the
 data for each client in a separate volume, the Kustomize Storage Config
-Generator is a KRM function/generator that can take in a list of storage volume
-names and transform them into appropriate PV, PVC, volume mounts, and container
-mounts in deployment manifests.
+Transformer is a KRM function that can take in a list of storage volume names
+and transform them into appropriate PV, PVC, volume mounts, and container mounts
+in deployment manifests.
 
 For example, given a base deployment manifest like this:
 ```yaml

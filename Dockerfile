@@ -1,11 +1,11 @@
 FROM php:7.4-cli
 
-COPY . /usr/src/kustomize-storage-config-generator
-WORKDIR /usr/src/kustomize-storage-config-generator
+COPY . /usr/src/kustomize-storage-config-transformer
+WORKDIR /usr/src/kustomize-storage-config-transformer
 
-RUN groupadd -r generator; \
-    useradd --no-log-init -r -g generator generator
+RUN groupadd -r transformer; \
+    useradd --no-log-init -r -g transformer transformer
 
-USER generator
+USER transformer
 
-CMD [ "./bin/generate-storage-config" ]
+CMD [ "./bin/transform-storage-config" ]

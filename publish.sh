@@ -41,7 +41,7 @@ TAG="${1:-latest}"
 build_date=$(date --rfc-3339=seconds)
 project_vcs_revision=$(git rev-parse --short HEAD)
 
-container_name="inveniem/kustomize-storage-generator:${TAG}"
+container_name="inveniem/kustomize-storage-transformer:${TAG}"
 
 docker build \
   --build-arg "VCS_REF=${project_vcs_revision}" \
