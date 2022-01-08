@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use JsonPath\JsonObject;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -341,9 +342,9 @@ class TransformStorageConfigCommand extends Command {
                                            array $function_config): array {
     $output_manifests = $input_manifests;
 
-    $pv_spec           = $function_config['spec'] ?? [];
-    $pv_name_template  = $function_config['name'] ?? [];
-    $pv_injectedValues = $function_config['injectedValues'] ?? [];
+    $pv_spec            = $function_config['spec'] ?? [];
+    $pv_name_template   = $function_config['name'] ?? [];
+    $pv_injected_values = $function_config['injectedValues'] ?? [];
 
     $pv_name_prefix   = $pv_name_template['prefix'] ?? '';
     $pv_name_suffix   = $pv_name_template['suffix'] ?? '';
@@ -366,14 +367,38 @@ class TransformStorageConfigCommand extends Command {
 
       $new_pv_name = implode('', [$pv_name_prefix, $value, $pv_name_suffix]);
 
-      $new_pv = [
+      // InvalidJsonException cannot happen because we're providing an array.
+      /** @noinspection PhpUnhandledExceptionInspection */
+      $new_pv_object = new JsonObject([
         'kind'       => 'PersistentVolume',
         'apiVersion' => 'v1',
         'metadata'   => ['name' => $new_pv_name],
         'spec'       => $pv_spec,
-      ];
+      ]);
 
-      $output_manifests['items'][] = $new_pv;
+      foreach ($pv_injected_values as $value_index => $injected_value) {
+        $field_path   = $injected_value['field']  ?? NULL;
+        $field_prefix = $injected_value['prefix'] ?? '';
+        $field_suffix = $injected_value['suffix'] ?? '';
+
+        if (empty($field_path)) {
+          throw new \InvalidArgumentException(
+            sprintf(
+              'Missing or empty "field" key for "persistentVolumeTemplate.injectedValues[%d]"',
+              $value_index
+            )
+          );
+        }
+
+        $field_value = implode('', [$field_prefix, $value, $field_suffix]);
+        $json_path   = '$.' . $field_path;
+
+        $new_pv_object->set($json_path, $field_value);
+      }
+
+      $new_pv_yaml = $new_pv_object->getValue();
+
+      $output_manifests['items'][] = $new_pv_yaml;
     }
 
     return $output_manifests;
