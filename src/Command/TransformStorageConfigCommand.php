@@ -27,6 +27,16 @@ class TransformStorageConfigCommand extends Command {
   const SUPPORTED_RESOURCE_LIST_VERSION = 'config.kubernetes.io/v1';
 
   /**
+   * The "kind" of function config this command can process.
+   */
+  const SUPPORTED_FUNC_CONFIG_KIND = 'StorageConfigTransformer';
+
+  /**
+   * The "apiVersion" of function config this command can process.
+   */
+  const SUPPORTED_FUNC_CONFIG_VERSION = 'kubernetes.inveniem.com/storage-config-transformer/v1alpha';
+
+  /**
    * Config. key that specifies all the different data permutations.
    */
   const CONFIG_KEY_PERMUTATIONS = 'permutations';
@@ -159,7 +169,10 @@ class TransformStorageConfigCommand extends Command {
     $resource_list_version = $input_yaml['apiVersion'] ?? NULL;
     $resource_list_items   = $input_yaml['items']      ?? [];
 
-    $transformer_configs = $input_yaml['functionConfig']['spec'] ?? [];
+    $function_config         = $input_yaml['functionConfig']  ?? [];
+    $function_config_kind    = $function_config['kind']       ?? NULL;
+    $function_config_version = $function_config['apiVersion'] ?? NULL;
+    $transformer_configs     = $function_config['spec']       ?? [];
 
     if (($resource_list_kind !== self::SUPPORTED_RESOURCE_LIST_KIND) ||
         ($resource_list_version !== self::SUPPORTED_RESOURCE_LIST_VERSION)) {
@@ -177,6 +190,19 @@ class TransformStorageConfigCommand extends Command {
     if (empty($resource_list_items)) {
       throw new \InvalidArgumentException(
         'Missing or empty "items" key in top-level resource list.'
+      );
+    }
+
+    if (($function_config_kind !== self::SUPPORTED_FUNC_CONFIG_KIND) ||
+        ($function_config_version !== self::SUPPORTED_FUNC_CONFIG_VERSION)) {
+      throw new \InvalidArgumentException(
+        sprintf(
+          'Expected a function config of kind "%s", version "%s"; but got a "%s" of version "%s".',
+          self::SUPPORTED_FUNC_CONFIG_KIND,
+          self::SUPPORTED_FUNC_CONFIG_VERSION,
+          $function_config_kind,
+          $function_config_version
+        )
       );
     }
 
