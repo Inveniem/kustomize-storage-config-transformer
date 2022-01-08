@@ -85,7 +85,7 @@ transformers:
   - configure-storage.yaml
 ```
 
-And a KST plugin config like this:
+And a KSCT plugin config like this:
 ```yaml
 # overlays/live/configure-storage.yaml
 apiVersion: storage-config-transformer.kubernetes.inveniem.com/v1
@@ -98,34 +98,12 @@ metadata:
         image: inveniem/kustomize-storage-transformer:latest
 spec:
   - permutations:
-      - values:
-          - sample-project1
-          - sample-project2
-          - sample-project3
-        targets:
-          - kind: persistentVolume
-            field: "spec.azureFile.shareName"
-            prefix: ~
-            suffix: ~
-
-          - kind: persistentVolumeClaim
-            field: "spec.volumeName"
-            prefix: "pv-myapp-live-"
-            suffix: ~
-
-          - kind: volume
-            field: "spec.persistentVolumeClaim.claimName"
-            prefix: "pvc-"
-            suffix: ~
-
-          - kind: volumeMount
-            field: "spec.mountPath"
-            prefix: "/mnt/share/"
+      values:
+        - sample-project1
+        - sample-project2
+        - sample-project3
             
-    persistentVolumes:
-      name:
-        prefix: "pv-myapp-live-"
-        suffix: ~
+    persistentVolumeTemplate:
       spec:
         capacity:
           storage: 1Ti
@@ -134,11 +112,15 @@ spec:
         azureFile:
           secretName: "myapp-azure-files-creds"
           shareName: "<<DYNAMIC>>"
-
-    persistentVolumeClaims:
       name:
-        prefix: pvc-
+        prefix: "pv-myapp-live-"
         suffix: ~
+      injectedValues:
+        - field: "spec.azureFile.shareName"
+          prefix: ~
+          suffix: ~
+
+    persistentVolumeClaimTemplate:
       spec:
         storageClassName: ""
         accessModes:
@@ -147,26 +129,42 @@ spec:
           requests:
             storage: 1Ti
         volumeName: "<<DYNAMIC>>"
+      name:
+        prefix: pvc-
+        suffix: ~
+      injectedValues:
+        - field: "spec.volumeName"
+          prefix: "pv-myapp-live-"
+          suffix: ~
 
-    volumeMounts:
+    volumeMountTemplates:
       - containers:
           - name: frontend-myapp
           - name: backend-myapp-api
 
-        volumeMounts:
-          - name:
-              prefix: "vol-mnt-"
-              suffix: ~
-            spec:
-              mountPath: "<<DYNAMIC>>"
 
-        volumes:
+        volumeTemplates:
           - name:
               prefix: "vol-"
               suffix: ~
             spec:
               persistentVolumeClaim:
                 claimName: "<<DYNAMIC>>"
+            injectedValues:
+              - field: "spec.persistentVolumeClaim.claimName"
+                prefix: "pvc-"
+                suffix: ~
+
+        mountTemplates:
+          - spec:
+              mountPath: "<<DYNAMIC>>"
+            name:
+              prefix: "vol-mnt-"
+              suffix: ~
+            injectedValues:
+              - field: "spec.mountPath"
+                prefix: "/mnt/share/"
+                suffix: ~
 ```
 
 This should produce the following deployment manifest:
