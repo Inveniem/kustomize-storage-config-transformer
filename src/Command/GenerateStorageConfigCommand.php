@@ -13,14 +13,14 @@ use Symfony\Component\Process\Process;
 /**
  * A generator command for Kustomize for modifying Kubernetes storage mounts.
  */
-class GenerateStorageCommand extends Command {
+class GenerateStorageConfigCommand extends Command {
 
   /**
    * The name of this command.
    *
    * @var string
    */
-  protected static $defaultName = 'generate-storage';
+  protected static $defaultName = 'generate-storage-config';
 
   /**
    * {@inheritdoc}
