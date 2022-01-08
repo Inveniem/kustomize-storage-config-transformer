@@ -496,26 +496,12 @@ class TransformStorageConfigCommand extends Command {
         throw new \RuntimeException($ex->getMessage(), 0, $ex);
       }
 
-      foreach ($res_injected_values as $value_index => $injected_value) {
-        $field_path   = $injected_value['field']  ?? NULL;
-        $field_prefix = $injected_value['prefix'] ?? '';
-        $field_suffix = $injected_value['suffix'] ?? '';
-
-        if (empty($field_path)) {
-          throw new \InvalidArgumentException(
-            sprintf(
-              'Missing or empty "field" key for "%s.injectedValues[%d]"',
-              $config_key,
-              $value_index
-            )
-          );
-        }
-
-        $field_value = implode('', [$field_prefix, $value, $field_suffix]);
-        $json_path   = '$.' . $field_path;
-
-        $new_res_object->set($json_path, $field_value);
-      }
+      $this->applyInjectedValues(
+        $config_key,
+        $value,
+        $new_res_object,
+        $res_injected_values
+      );
 
       $new_res_yaml = $new_res_object->getValue();
 
@@ -523,6 +509,48 @@ class TransformStorageConfigCommand extends Command {
     }
 
     return $output_manifests;
+  }
+
+  /**
+   * Applies injected values to the given resource object.
+   *
+   * @param string $config_key
+   *   The name of the configuration key that provides the injected values
+   *   configuration.
+   * @param string $permutation_value
+   *   The current permutation value that is being injected into the resource.
+   * @param \JsonPath\JsonObject $res_object
+   *   The resource object into which values are being injected.
+   * @param array $injected_values_config
+   *   The configuration for how values should be formatted and where they
+   *   should be injected into the resource object.
+   */
+  protected function applyInjectedValues(string $config_key,
+                                         string $permutation_value,
+                                         JsonObject $res_object,
+                                         array $injected_values_config): void {
+    foreach ($injected_values_config as $value_index => $injected_value) {
+      $field_path   = $injected_value['field']  ?? NULL;
+      $field_prefix = $injected_value['prefix'] ?? '';
+      $field_suffix = $injected_value['suffix'] ?? '';
+
+      if (empty($field_path)) {
+        throw new \InvalidArgumentException(
+          sprintf(
+            'Missing or empty "field" key for "%s.injectedValues[%d]"',
+            $config_key,
+            $value_index
+          )
+        );
+      }
+
+      $field_value =
+        implode('', [$field_prefix, $permutation_value, $field_suffix]);
+
+      $json_path = '$.' . $field_path;
+
+      $res_object->set($json_path, $field_value);
+    }
   }
 
 }
