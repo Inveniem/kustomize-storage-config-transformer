@@ -144,25 +144,25 @@ spec:
 
 
         volumeTemplates:
-          - name:
-              prefix: "vol-"
-              suffix: ~
-            spec:
+          - mergeSpec:
               persistentVolumeClaim:
                 claimName: "<<DYNAMIC>>"
+            name:
+              prefix: "vol-"
+              suffix: ~
             injectedValues:
-              - field: "spec.persistentVolumeClaim.claimName"
+              - field: "persistentVolumeClaim.claimName"
                 prefix: "pvc-"
                 suffix: ~
 
         mountTemplates:
-          - spec:
+          - mergeSpec:
               mountPath: "<<DYNAMIC>>"
             name:
               prefix: "vol-mnt-"
               suffix: ~
             injectedValues:
-              - field: "spec.mountPath"
+              - field: "mountPath"
                 prefix: "/mnt/share/"
                 suffix: ~
 ```
