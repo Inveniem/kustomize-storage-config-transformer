@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use JsonPath\InvalidJsonException;
 use JsonPath\JsonObject;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -322,11 +323,11 @@ class TransformStorageConfigCommand extends Command {
    *   An associative array representing the Kubernetes resource manifests to
    *   transform.
    * @param string[] $permutation_values
-   *   The values for which the persistent value template will be repeatedly
+   *   The values for which the persistent volume template will be repeatedly
    *   applied and customized.
    * @param array $function_config
-   *   Settings for the persistent value template, including its specification,
-   *   name template, and injected value templates.
+   *   Settings for how each persistent volume will be generated, including its
+   *   specification template, name template, and injected value templates.
    *
    * @return array
    *   An associative array representing the modified Kubernetes resource
@@ -337,71 +338,18 @@ class TransformStorageConfigCommand extends Command {
    *
    * @noinspection PhpUnused
    */
-  function applyPersistentVolumeTransforms(array $input_manifests,
-                                           array $permutation_values,
-                                           array $function_config): array {
-    $output_manifests = $input_manifests;
-
-    $pv_spec            = $function_config['spec'] ?? [];
-    $pv_name_template   = $function_config['name'] ?? [];
-    $pv_injected_values = $function_config['injectedValues'] ?? [];
-
-    $pv_name_prefix   = $pv_name_template['prefix'] ?? '';
-    $pv_name_suffix   = $pv_name_template['suffix'] ?? '';
-
-    if (empty($pv_spec)) {
-      throw new \InvalidArgumentException(
-        '"persistentVolumeTemplate.spec" key is missing or empty.'
-      );
-    }
-
-    foreach ($permutation_values as $index => $value) {
-      if (empty($value)) {
-        throw new \InvalidArgumentException(
-          sprintf(
-            'Empty value encountered at "permutations.values[%d]"',
-            $index
-          )
-        );
-      }
-
-      $new_pv_name = implode('', [$pv_name_prefix, $value, $pv_name_suffix]);
-
-      // InvalidJsonException cannot happen because we're providing an array.
-      /** @noinspection PhpUnhandledExceptionInspection */
-      $new_pv_object = new JsonObject([
-        'kind'       => 'PersistentVolume',
-        'apiVersion' => 'v1',
-        'metadata'   => ['name' => $new_pv_name],
-        'spec'       => $pv_spec,
-      ]);
-
-      foreach ($pv_injected_values as $value_index => $injected_value) {
-        $field_path   = $injected_value['field']  ?? NULL;
-        $field_prefix = $injected_value['prefix'] ?? '';
-        $field_suffix = $injected_value['suffix'] ?? '';
-
-        if (empty($field_path)) {
-          throw new \InvalidArgumentException(
-            sprintf(
-              'Missing or empty "field" key for "persistentVolumeTemplate.injectedValues[%d]"',
-              $value_index
-            )
-          );
-        }
-
-        $field_value = implode('', [$field_prefix, $value, $field_suffix]);
-        $json_path   = '$.' . $field_path;
-
-        $new_pv_object->set($json_path, $field_value);
-      }
-
-      $new_pv_yaml = $new_pv_object->getValue();
-
-      $output_manifests['items'][] = $new_pv_yaml;
-    }
-
-    return $output_manifests;
+  protected function applyPersistentVolumeTransforms(
+      array $input_manifests,
+      array $permutation_values,
+      array $function_config): array {
+    return $this->generateResourcesOfType(
+      self::CONFIG_KEY_PVS,
+      'PersistentVolume',
+      'v1',
+      $input_manifests,
+      $permutation_values,
+      $function_config
+    );
   }
 
   /**
@@ -414,11 +362,12 @@ class TransformStorageConfigCommand extends Command {
    *   An associative array representing the Kubernetes resource manifests to
    *   transform.
    * @param string[] $permutation_values
-   *   The values for which the persistent value claim template will be
+   *   The values for which the persistent volume claim template will be
    *   repeatedly applied and customized.
    * @param array $function_config
-   *   Settings for the persistent value claim template, including its
-   *   specification, name template, and injected value templates.
+   *   Settings for how each persistent volume claim will be generated,
+   *   including its specification template, name template, and injected value
+   *   templates.
    *
    * @return array
    *   An associative array representing the modified Kubernetes resource
@@ -429,33 +378,18 @@ class TransformStorageConfigCommand extends Command {
    *
    * @noinspection PhpUnused
    */
-  function applyPersistentVolumeClaimTransforms(array $input_manifests,
-                                                array $permutation_values,
-                                                array $function_config): array {
-    $output_manifests = $input_manifests;
-
-    $pvc_spec           = $function_config['spec']           ?? [];
-    $pvc_name_template  = $function_config['name']           ?? [];
-    $pvc_injectedValues = $function_config['injectedValues'] ?? [];
-
-    if (empty($pvc_spec)) {
-      throw new \InvalidArgumentException(
-        '"persistentVolumeClaimTemplate.spec" key is missing or empty.'
-      );
-    }
-
-    foreach ($permutation_values as $index => $value) {
-      if (empty($value)) {
-        throw new \InvalidArgumentException(
-          sprintf(
-            'Empty value encountered at "permutations.values[%d]"',
-            $index
-          )
-        );
-      }
-    }
-
-    return $output_manifests;
+  protected function applyPersistentVolumeClaimTransforms(
+      array $input_manifests,
+      array $permutation_values,
+      array $function_config): array {
+    return $this->generateResourcesOfType(
+      self::CONFIG_KEY_PVS,
+      'PersistentVolumeClaim',
+      'v1',
+      $input_manifests,
+      $permutation_values,
+      $function_config
+    );
   }
 
   /**
@@ -475,8 +409,7 @@ class TransformStorageConfigCommand extends Command {
    *   The values for which the persistent value template will be repeatedly
    *   applied and customized.
    * @param array $function_config
-   *   Settings for the persistent value template, including its specification,
-   *   name template, and injected value templates.
+   *   Settings that control how volumes are injected into container resources.
    *
    * @return array
    *   An associative array representing the modified Kubernetes resource
@@ -487,10 +420,108 @@ class TransformStorageConfigCommand extends Command {
    *
    * @noinspection PhpUnused
    */
-  function applyContainerVolumeTransforms(array $input_manifests,
-                                          array $permutation_values,
-                                          array $function_config): array {
+  protected function applyContainerVolumeTransforms(
+      array $input_manifests,
+      array $permutation_values,
+      array $function_config): array {
     return $input_manifests;
+  }
+
+  /**
+   * Generates resources of a particular kind based on a config template.
+   *
+   * @param string $config_key
+   *   The name of the configuration key that provides the template for the
+   *   resources. This is used only for error reporting.
+   * @param string $resource_kind
+   *   The type of the resources being generated.
+   * @param string $resource_version
+   *   The version of the resources being generated.
+   * @param array $input_manifests
+   *   An associative array representing the Kubernetes resource manifests to
+   *   transform.
+   * @param string[] $permutation_values
+   *   The values for which the resource template will be repeatedly applied and
+   *   customized.
+   * @param array $function_config
+   *   Settings for how each resource will be generated, including its
+   *   specification template, name template, and injected value templates.
+   *
+   * @return array
+   */
+  protected function generateResourcesOfType(string $config_key,
+                                             string $resource_kind,
+                                             string $resource_version,
+                                             array $input_manifests,
+                                             array $permutation_values,
+                                             array $function_config): array {
+    $output_manifests = $input_manifests;
+
+    $res_spec            = $function_config['spec'] ?? [];
+    $res_name_template   = $function_config['name'] ?? [];
+    $res_injected_values = $function_config['injectedValues'] ?? [];
+
+    $name_prefix   = $res_name_template['prefix'] ?? '';
+    $name_suffix   = $res_name_template['suffix'] ?? '';
+
+    if (empty($res_spec)) {
+      throw new \InvalidArgumentException(
+        sprintf('"%s.spec" key is missing or empty.', $config_key)
+      );
+    }
+
+    foreach ($permutation_values as $index => $value) {
+      if (empty($value)) {
+        throw new \InvalidArgumentException(
+          sprintf(
+            'Empty value encountered at "permutations.values[%d]"',
+            $index
+          )
+        );
+      }
+
+      $new_res_name = implode('', [$name_prefix, $value, $name_suffix]);
+
+      try {
+        $new_res_object = new JsonObject([
+          'kind'       => $resource_kind,
+          'apiVersion' => $resource_version,
+          'metadata'   => ['name' => $new_res_name],
+          'spec'       => $res_spec,
+        ]);
+      }
+      catch (InvalidJsonException $ex) {
+        // This should never happen because we're providing an array.
+        throw new \RuntimeException($ex->getMessage(), 0, $ex);
+      }
+
+      foreach ($res_injected_values as $value_index => $injected_value) {
+        $field_path   = $injected_value['field']  ?? NULL;
+        $field_prefix = $injected_value['prefix'] ?? '';
+        $field_suffix = $injected_value['suffix'] ?? '';
+
+        if (empty($field_path)) {
+          throw new \InvalidArgumentException(
+            sprintf(
+              'Missing or empty "field" key for "%s.injectedValues[%d]"',
+              $config_key,
+              $value_index
+            )
+          );
+        }
+
+        $field_value = implode('', [$field_prefix, $value, $field_suffix]);
+        $json_path   = '$.' . $field_path;
+
+        $new_res_object->set($json_path, $field_value);
+      }
+
+      $new_res_yaml = $new_res_object->getValue();
+
+      $output_manifests['items'][] = $new_res_yaml;
+    }
+
+    return $output_manifests;
   }
 
 }
