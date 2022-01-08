@@ -37,16 +37,36 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend-frontend-myapp
+      app: frontend-myapp
   template:
     metadata:
       labels:
-        app: frontend-frontend-myapp
+        app: frontend-myapp
         role: frontend
     spec:
       containers:
-        - name: frontend-frontend-myapp
+        - name: frontend-myapp
           image: "inveniem/frontend-myapp:latest"
+          ports:
+            - containerPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: some-other-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: some-other-app
+  template:
+    metadata:
+      labels:
+        app: some-other-app
+    spec:
+      containers:
+        - name: some-other-app
+          image: "inveniem/some-other-app:latest"
           ports:
             - containerPort: 5000
 ```
@@ -254,11 +274,11 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: frontend-frontend-myapp
+      app: frontend-myapp
   template:
     metadata:
       labels:
-        app: frontend-frontend-myapp
+        app: frontend-myapp
         role: frontend
     spec:
       volumes:
@@ -272,7 +292,7 @@ spec:
           persistentVolumeClaim:
             claimName: "pvc-sample-project3"
       containers:
-        - name: frontend-frontend-myapp
+        - name: frontend-myapp
           image: "inveniem/frontend-myapp:latest"
           ports:
             - containerPort: 5000
@@ -283,4 +303,24 @@ spec:
               name: "vol-mnt-sample-project2"
             - mountPath: "/mnt/share/sample-project3"
               name: "vol-mnt-sample-project3"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: some-other-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: some-other-app
+  template:
+    metadata:
+      labels:
+        app: some-other-app
+    spec:
+      containers:
+        - name: some-other-app
+          image: "inveniem/some-other-app:latest"
+          ports:
+            - containerPort: 5000
 ```
