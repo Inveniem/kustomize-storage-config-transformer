@@ -1,12 +1,14 @@
 # Kustomize Storage Config Transformer
 As a DevOps professional who is hosting the same containerized software for
 multiple tenants on the same Kubernetes infrastructure and who needs to keep the
-data for each client in a separate volume, the Kustomize Storage Config
-Transformer is a KRM function that can take in a list of storage volume names
-and transform them into appropriate PV, PVC, volume mounts, and container mounts
-in deployment manifests.
+data for each client in a separate volume (potentially even in different storage
+accounts like Azure Files, Azure Blob, S3, Qumulo, etc.), the Kustomize Storage
+Config Transformer is a KRM function that can take in a list of tenant names and
+transform them into deployment manifests that contain appropriate declarations
+of Persistent Volumes (PVs), Persistent Volume Claims (PVCs), volume mounts, and
+container mounts.
 
-For example, given a base deployment manifest like this:
+For example, consider the following base deployment manifest:
 ```yaml
 # base/deployment.yaml
 apiVersion: apps/v1
@@ -72,7 +74,7 @@ spec:
             - containerPort: 5000
 ```
 
-A Kustomization config like this:
+Now, consider a "live" overlay that has a Kustomization config like this:
 ```yaml
 # overlays/live/kustomization.yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -88,7 +90,7 @@ transformers:
 And a KSCT plugin config like this:
 ```yaml
 # overlays/live/configure-storage.yaml
-apiVersion: storage-config-transformer.kubernetes.inveniem.com/v1
+apiVersion: kubernetes.inveniem.com/storage-config-transformer/v1alpha
 kind: StorageConfigTransformer
 metadata:
   name: storage-config-transformer
@@ -166,7 +168,7 @@ spec:
                 suffix: ~
 ```
 
-This should produce the following deployment manifest:
+This would produce the following deployment manifest:
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
@@ -343,3 +345,28 @@ spec:
           ports:
             - containerPort: 5000
 ```
+
+Note that the output manifests include the following:
+1. A PV (available cluster-wide) is declared for each permutation value (e.g.,
+   `sample-project1`, `sample-project2`, etc.), with:
+   1. Each name prefixed according to the name prefix template.
+   2. The specification (`spec`) for each PV is copied from the 
+      `persistentVolumeTemplate` from the KSCT config.
+   3. The share name is dynamically-injected based on the `injectedValues`
+      settings in the KSCT config.
+
+2. A PVC (declared in the namespace in which the application is being
+   deployed) is declared for each permutation value, with:
+   1. The name of each PVC prefixed according to the name prefix template.
+   2. Each PVC bound to its corresponding PV via a dynamically-injected 
+      `volumeName` attribute value.
+
+3. Volumes declared that reference the PVs in each deployment that contains
+   containers referenced by the `containerVolumeTemplates.containers` key in the
+   KSCT config, with its settings merged-in from the `mergeSpec` key of the
+   volume template of the KSCT config.
+
+4. Volume mounts declared in each container that matches a name in the 
+   `containerVolumeTemplates.containers` key of the KSCT config, with its
+   settings merged-in from the `mergeSpec` key of the volume mount template of
+   the KSCT config.
