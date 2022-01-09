@@ -45,6 +45,11 @@ class TransformStorageConfigCommand extends Command {
   const CONFIG_KEY_PERMUTATIONS = 'permutations';
 
   /**
+   * Config. key under permutations that specifies the permutation values.
+   */
+  const CONFIG_KEY_PERM_VALUES = 'values';
+
+  /**
    * Config. key that specifies the template for persistent volumes.
    */
   const CONFIG_KEY_PVS = 'persistentVolumeTemplate';
@@ -60,9 +65,19 @@ class TransformStorageConfigCommand extends Command {
   const CONFIG_KEY_CONTAINER_VOLUMES = 'containerVolumeTemplates';
 
   /**
-   * Config. key under permutations that specifies the permutation values.
+   * Config. key that specifies the container volume template target containers.
    */
-  const CONFIG_KEY_PERM_VALUES = 'values';
+  const CONFIG_KEY_CV_CONTAINERS = 'containers';
+
+  /**
+   * Config. key that specifies the container volume template for volume mounts.
+   */
+  const CONFIG_KEY_CV_VOLUME_MOUNT_TEMPLATES = 'volumeMountTemplates';
+
+  /**
+   * Config. key that specifies the container volume template for volumes.
+   */
+  const CONFIG_KEY_CV_VOLUMES_TEMPLATE = 'volumeTemplates';
 
   /**
    * Mappings between configuration keys and transformer functions.
@@ -82,6 +97,19 @@ class TransformStorageConfigCommand extends Command {
       'configKey' => self::CONFIG_KEY_CONTAINER_VOLUMES,
       'function'  => 'applyContainerVolumeTransforms',
     ],
+  ];
+
+  /**
+   * Names and versions of resource types that can contain containers.
+   *
+   * Each value is a list of JSONPath expressions for reaching the container
+   * and volume definitions of the resource.
+   */
+  const CONTAINER_RESOURCES = [
+    'Deployment:apps/v1' => [
+      'containersPath' => '$.spec.template.spec.containers',
+      'volumesPath'    => '$.spec.template.spec.volumes',
+    ]
   ];
 
   /**
@@ -242,7 +270,7 @@ class TransformStorageConfigCommand extends Command {
   /**
    * Applies the given storage transformation to Kubernetes resources.
    *
-   * @param array $input_manifests
+   * @param array $input_resources
    *   An associative array representing the Kubernetes resource manifests to
    *   transform.
    * @param array $transform_config
@@ -255,7 +283,7 @@ class TransformStorageConfigCommand extends Command {
    * @throws \InvalidArgumentException
    *   If any of the provided configuration is invalid.
    */
-  protected function applyTransformation(array $input_manifests,
+  protected function applyTransformation(array $input_resources,
                                          array $transform_config): array {
     $permutation_values =
       $transform_config[self::CONFIG_KEY_PERMUTATIONS][self::CONFIG_KEY_PERM_VALUES] ?? NULL;
@@ -273,9 +301,9 @@ class TransformStorageConfigCommand extends Command {
     $at_least_one_callback_invoked = FALSE;
     $config_keys                   = [];
 
-    $output_manifests = array_reduce(
+    $output_resources = array_reduce(
       self::TRANSFORMATIONS,
-      function (array $manifests, array $transform_info) use (
+      function (array $resources, array $transform_info) use (
         $transform_config,
         $permutation_values,
         &$at_least_one_callback_invoked,
@@ -284,22 +312,26 @@ class TransformStorageConfigCommand extends Command {
         $transform_function = $transform_info['function'];
         $config_key         = $transform_info['configKey'];
 
-        $config_keys[]   = $config_key;
-        $function_config = $transform_config[$config_key] ?? [];
+        $config_keys[]           = $config_key;
+        $function_section_config = $transform_config[$config_key] ?? [];
 
-        if (!empty($function_config)) {
+        if (!empty($function_section_config)) {
           /** @var callable $callback */
           $callback  = [$this, $transform_function];
 
-          $manifests =
-            $callback($manifests, $permutation_values, $function_config);
+          $resources =
+            $callback(
+              $resources,
+              $permutation_values,
+              $function_section_config
+            );
 
           $at_least_one_callback_invoked = TRUE;
         }
 
-        return $manifests;
+        return $resources;
       },
-      $input_manifests
+      $input_resources
     );
 
     if (!$at_least_one_callback_invoked) {
@@ -311,7 +343,7 @@ class TransformStorageConfigCommand extends Command {
       );
     }
 
-    return $output_manifests;
+    return $output_resources;
   }
 
   /**
@@ -320,13 +352,13 @@ class TransformStorageConfigCommand extends Command {
    * The persistent volume template is repeated and customized for each
    * permutation value.
    *
-   * @param array $input_manifests
+   * @param array $input_resources
    *   An associative array representing the Kubernetes resource manifests to
    *   transform.
    * @param string[] $permutation_values
    *   The values for which the persistent volume template will be repeatedly
    *   applied and customized.
-   * @param array $function_config
+   * @param array $function_section_config
    *   Settings for how each persistent volume will be generated, including its
    *   specification template, name template, and injected value templates.
    *
@@ -340,16 +372,16 @@ class TransformStorageConfigCommand extends Command {
    * @noinspection PhpUnused
    */
   protected function applyPersistentVolumeTransforms(
-      array $input_manifests,
+      array $input_resources,
       array $permutation_values,
-      array $function_config): array {
+      array $function_section_config): array {
     return $this->generateResourcesOfType(
       self::CONFIG_KEY_PVS,
       'PersistentVolume',
       'v1',
-      $input_manifests,
+      $input_resources,
       $permutation_values,
-      $function_config
+      $function_section_config
     );
   }
 
@@ -359,13 +391,13 @@ class TransformStorageConfigCommand extends Command {
    * The persistent volume claim template is repeated and customized for each
    * permutation value.
    *
-   * @param array $input_manifests
+   * @param array $input_resources
    *   An associative array representing the Kubernetes resource manifests to
    *   transform.
    * @param string[] $permutation_values
    *   The values for which the persistent volume claim template will be
    *   repeatedly applied and customized.
-   * @param array $function_config
+   * @param array $function_section_config
    *   Settings for how each persistent volume claim will be generated,
    *   including its specification template, name template, and injected value
    *   templates.
@@ -380,16 +412,16 @@ class TransformStorageConfigCommand extends Command {
    * @noinspection PhpUnused
    */
   protected function applyPersistentVolumeClaimTransforms(
-      array $input_manifests,
+      array $input_resources,
       array $permutation_values,
-      array $function_config): array {
+      array $function_section_config): array {
     return $this->generateResourcesOfType(
       self::CONFIG_KEY_PVS,
       'PersistentVolumeClaim',
       'v1',
-      $input_manifests,
+      $input_resources,
       $permutation_values,
-      $function_config
+      $function_section_config
     );
   }
 
@@ -403,14 +435,16 @@ class TransformStorageConfigCommand extends Command {
    * include a volume mount for each permutation, using the volume mount
    * template specified in the transformation function configuration.
    *
-   * @param array $input_manifests
+   * @param array $input_resources
    *   An associative array representing the Kubernetes resource manifests to
    *   transform.
    * @param string[] $permutation_values
-   *   The values for which the persistent value template will be repeatedly
+   *   The values for which container volume templates will be repeatedly
    *   applied and customized.
-   * @param array $function_config
-   *   Settings that control how volumes are injected into container resources.
+   * @param array $function_section_config
+   *   Settings for each of the transformations. Each element provides the
+   *   settings for a single transformation. The settings control how a
+   *   transformation injects volumes into container resources.
    *
    * @return array
    *   An associative array representing the modified Kubernetes resource
@@ -422,10 +456,198 @@ class TransformStorageConfigCommand extends Command {
    * @noinspection PhpUnused
    */
   protected function applyContainerVolumeTransforms(
-      array $input_manifests,
+      array $input_resources,
       array $permutation_values,
-      array $function_config): array {
-    return $input_manifests;
+      array $function_section_config): array {
+
+    $output_resources = $input_resources;
+
+    foreach ($function_section_config as $index => $container_transform_config) {
+      try {
+        $output_resources =
+          $this->applyContainerVolumeTransform(
+            $output_resources,
+            $permutation_values,
+            $container_transform_config
+          );
+      }
+      catch (\InvalidArgumentException $ex) {
+        throw new \InvalidArgumentException(
+          sprintf(
+            'Error while processing transformation for "%s[%d]" in kustomize-storage-transformer plugin configuration: %s. See plugin documentation.',
+            self::CONFIG_KEY_CONTAINER_VOLUMES,
+            $index,
+            $ex->getMessage(),
+          ),
+        );
+      }
+    }
+
+    return $output_resources;
+  }
+
+  /**
+   * Applies a transformation for container-related volumes and volume mounts.
+   *
+   * This applies only the given transformation out of the full list of
+   * container volume transformations.
+   *
+   * Whenever a resource that references one of the containers in the list is
+   * encountered, it is modified to include one volume for each permutation,
+   * using the volume template specified in the transformation function
+   * configuration. Then, each matching container is modified to include to
+   * include a volume mount for each permutation, using the volume mount
+   * template specified in the transformation function configuration.
+   *
+   * @param array $input_resources
+   *   An associative array representing the Kubernetes resource manifests to
+   *   transform.
+   * @param string[] $permutation_values
+   *   The values for which the persistent value template will be repeatedly
+   *   applied and customized.
+   * @param array $container_transform_config
+   *   Settings that control how this transformation injects volumes into
+   *   container resources.
+   *
+   * @return array
+   *   An associative array representing the modified Kubernetes resource
+   *   manifests.
+   *
+   * @throws \InvalidArgumentException
+   *   If any of the provided configuration is invalid.
+   *
+   * @noinspection PhpUnused
+   */
+  protected function applyContainerVolumeTransform(
+      array $input_resources,
+      array $permutation_values,
+      array $container_transform_config): array {
+    $containers =
+      $container_transform_config[self::CONFIG_KEY_CV_CONTAINERS] ?? [];
+
+    $volume_templates =
+      $container_transform_config[self::CONFIG_KEY_CV_VOLUMES_TEMPLATE] ?? [];
+
+    $volume_mount_templates =
+      $container_transform_config[self::CONFIG_KEY_CV_VOLUME_MOUNT_TEMPLATES] ?? [];
+
+    if (empty($containers)) {
+      throw new \InvalidArgumentException(
+        '"containerVolumeTemplates.containers" key is missing or empty.'
+      );
+    }
+
+    $target_container_names = $this->getTargetContainerNames($containers);
+
+    $output_resources = $input_resources;
+    $output_items     = $output_resources['items'];
+
+    foreach ($output_items as &$resource) {
+      $resource_kind    = $resource['kind']       ?? '';
+      $resource_version = $resource['apiVersion'] ?? '';
+
+      $resource_type = implode(':', [$resource_kind, $resource_version]);
+
+      if (isset(self::CONTAINER_RESOURCES[$resource_type])) {
+        $resource =
+          $this->applyContainerVolumeTransformToResource(
+            $volume_templates,
+            $volume_mount_templates,
+            $target_container_names,
+            $permutation_values,
+            $resource_type,
+            $resource
+          );
+      }
+    }
+
+    $output_resources['items'] = $output_items;
+
+    return $output_resources;
+  }
+
+  /**
+   * Applies templates for volumes and volume mounts to the given resource.
+   *
+   * @param array $volume_templates
+   *   The list of templates to apply to volumes shared by all matching
+   *   containers.
+   * @param array $volume_mount_templates
+   *   The list of templates to apply to volume mounts within each matching
+   *   container.
+   * @param array $target_container_names
+   *   The names of containers to manipulate.
+   * @param string[] $permutation_values
+   *   The values for which each template will be repeatedly applied and
+   *   customized.
+   * @param string $resource_type
+   *   The resource to which container volume transforms are being applied.
+   * @param array $resource
+   *   The type of the resource (e.g., "Deployment:apps/v1").
+   *
+   * @return array
+   *   The modified resource.
+   */
+  protected function applyContainerVolumeTransformToResource(
+      array $volume_templates,
+      array $volume_mount_templates,
+      array $target_container_names,
+      array $permutation_values,
+      string $resource_type,
+      array $resource): array {
+    $expressions = self::CONTAINER_RESOURCES[$resource_type];
+
+    $containers_expression = $expressions['containersPath'];
+    $volumes_expression    = $expressions['volumesPath'];
+
+    try {
+      $resource_object = new JsonObject($resource, TRUE);
+    }
+    catch (InvalidJsonException $ex) {
+      // This should never happen because we're providing an array.
+      throw new \RuntimeException($ex->getMessage(), 0, $ex);
+    }
+
+    $containers = $resource_object->get($containers_expression) ?: [];
+    $volumes    = $resource_object->get($volumes_expression)    ?: [];
+
+    $have_container_match = FALSE;
+
+    foreach ($containers as &$container) {
+      $container_name = $container['name'] ?? '';
+
+      if (in_array($container_name, $target_container_names)) {
+        $have_container_match = TRUE;
+
+        $volume_mounts = $container['volumeMounts'] ?? [];
+
+        $new_volume_mounts =
+          $this->generateResourceFragments(
+            self::CONFIG_KEY_CV_VOLUME_MOUNT_TEMPLATES,
+            $permutation_values,
+            $volume_mount_templates
+          );
+
+        $container['volumeMounts'] =
+          array_merge($volume_mounts, $new_volume_mounts);
+      }
+    }
+
+    if ($have_container_match) {
+      $new_volumes =
+        $this->generateResourceFragments(
+          self::CONFIG_KEY_CV_VOLUMES_TEMPLATE,
+          $permutation_values,
+          $volume_templates
+        );
+
+      $volumes = array_merge($volumes, $new_volumes);
+
+      $resource_object->set($containers_expression, $containers);
+      $resource_object->set($volumes_expression,    $volumes);
+    }
+
+    return $resource_object->getValue();
   }
 
   /**
@@ -438,32 +660,29 @@ class TransformStorageConfigCommand extends Command {
    *   The type of the resources being generated.
    * @param string $resource_version
    *   The version of the resources being generated.
-   * @param array $input_manifests
+   * @param array $input_resources
    *   An associative array representing the Kubernetes resource manifests to
    *   transform.
    * @param string[] $permutation_values
    *   The values for which the resource template will be repeatedly applied and
    *   customized.
-   * @param array $function_config
+   * @param array $config_section
    *   Settings for how each resource will be generated, including its
    *   specification template, name template, and injected value templates.
    *
    * @return array
    */
-  protected function generateResourcesOfType(string $config_key,
-                                             string $resource_kind,
-                                             string $resource_version,
-                                             array $input_manifests,
-                                             array $permutation_values,
-                                             array $function_config): array {
-    $output_manifests = $input_manifests;
+  protected function generateResourcesOfType(
+      string $config_key,
+      string $resource_kind,
+      string $resource_version,
+      array $input_resources,
+      array $permutation_values,
+      array $config_section): array {
+    $output_resources = $input_resources;
 
-    $res_spec            = $function_config['spec'] ?? [];
-    $res_name_template   = $function_config['name'] ?? [];
-    $res_injected_values = $function_config['injectedValues'] ?? [];
-
-    $name_prefix   = $res_name_template['prefix'] ?? '';
-    $name_suffix   = $res_name_template['suffix'] ?? '';
+    $res_spec            = $config_section['spec'] ?? [];
+    $res_injected_values = $config_section['injectedValues'] ?? [];
 
     if (empty($res_spec)) {
       throw new \InvalidArgumentException(
@@ -471,8 +690,8 @@ class TransformStorageConfigCommand extends Command {
       );
     }
 
-    foreach ($permutation_values as $index => $value) {
-      if (empty($value)) {
+    foreach ($permutation_values as $index => $permutation_value) {
+      if (empty($permutation_value)) {
         throw new \InvalidArgumentException(
           sprintf(
             'Empty value encountered at "permutations.values[%d]"',
@@ -481,7 +700,8 @@ class TransformStorageConfigCommand extends Command {
         );
       }
 
-      $new_res_name = implode('', [$name_prefix, $value, $name_suffix]);
+      $new_res_name =
+        $this->generateName($config_section, $permutation_value);
 
       try {
         $new_res_object = new JsonObject([
@@ -498,17 +718,141 @@ class TransformStorageConfigCommand extends Command {
 
       $this->applyInjectedValues(
         $config_key,
-        $value,
+        $permutation_value,
         $new_res_object,
         $res_injected_values
       );
 
       $new_res_yaml = $new_res_object->getValue();
 
-      $output_manifests['items'][] = $new_res_yaml;
+      $output_resources['items'][] = $new_res_yaml;
     }
 
-    return $output_manifests;
+    return $output_resources;
+  }
+
+  /**
+   * Generates resource fragments based on a config template.
+   *
+   * Resource fragments are parts of larger specifications. For example,
+   * elements in the "volumes" and "volumeMounts" keys of deployments and
+   * containers, respectively.
+   *
+   * @param string $config_key
+   *   The name of the configuration key that provides the template for the
+   *   resources. This is used only for error reporting.
+   * @param string[] $permutation_values
+   *   The values for which the fragment template will be repeatedly applied and
+   *   customized.
+   * @param array[] $config_sections
+   *   Settings for how each fragment will be generated, including its
+   *   merge specification template, name template, and injected value
+   *   templates.
+   *
+   * @return array[]
+   *   An array containing each resource fragment that was generated by the
+   *   permutations and configuration sections. The total array length will be
+   *   M x N, where M is the number of permutation values and N is the number of
+   *   configuration sections.
+   */
+  protected function generateResourceFragments(
+      string $config_key,
+      array $permutation_values,
+      array $config_sections): array {
+    $resource_fragments = [];
+
+    foreach ($permutation_values as $index => $permutation_value) {
+      if (empty($permutation_value)) {
+        throw new \InvalidArgumentException(
+          sprintf(
+            'Empty value encountered at "permutations.values[%d]"',
+            $index
+          )
+        );
+      }
+
+      foreach ($config_sections as $config_section) {
+        $merge_spec      = $config_section['mergeSpec']      ?? [];
+        $injected_values = $config_section['injectedValues'] ?? [];
+
+        $new_fragment_name =
+          $this->generateName($config_section, $permutation_value);
+
+        $new_fragment_array =
+          array_merge(['name' => $new_fragment_name], $merge_spec);
+
+        try {
+          $new_fragment_object = new JsonObject($new_fragment_array);
+        }
+        catch (InvalidJsonException $ex) {
+          // This should never happen because we're providing an array.
+          throw new \RuntimeException($ex->getMessage(), 0, $ex);
+        }
+
+        $this->applyInjectedValues(
+          sprintf('%s.mergeSpec', $config_key),
+          $permutation_value,
+          $new_fragment_object,
+          $injected_values
+        );
+
+        $resource_fragments[] = $new_fragment_object->getValue();
+      }
+    }
+
+    return $resource_fragments;
+  }
+
+  /**
+   * Returns the names of the containers targeted by the specified configs.
+   *
+   * @param array $container_configs
+   *   The target containers configuration in a container volume template of the
+   *   plugin configuration.
+   *
+   * @return string[]
+   *   The list of the names of containers that are being targeted.
+   */
+  protected function getTargetContainerNames(array $container_configs): array {
+    $target_container_names = [];
+
+    foreach ($container_configs as $index => $target_container) {
+      $target_container_name = $target_container['name'] ?? NULL;
+
+      if (empty($target_container_name)) {
+        throw new \InvalidArgumentException(
+          sprintf(
+            '"containers[%d].name" key is missing or empty.',
+            $index
+          )
+        );
+      }
+
+      $target_container_names[] = $target_container_name;
+    }
+
+    return $target_container_names;
+  }
+
+  /**
+   * Generates a name from settings that include the name prefix and suffix.
+   *
+   * @param array $config_section
+   *   The configuration section containing the name template settings.
+   * @param string $permutation_value
+   *   The current permutation for which a name is being generated.
+   *
+   * @return string
+   *   The name generated from the permutation.
+   */
+  protected function generateName(array $config_section,
+                                  string $permutation_value): string {
+    $res_name_template = $config_section['name'] ?? [];
+
+    $name_prefix   = $res_name_template['prefix'] ?? '';
+    $name_suffix   = $res_name_template['suffix'] ?? '';
+
+    return implode('', [$name_prefix, $permutation_value, $name_suffix]);
   }
 
   /**
