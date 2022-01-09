@@ -383,12 +383,12 @@ Note that the output manifests include the following:
    2. Each PVC bound to its corresponding PV via a dynamically-injected 
       `volumeName` attribute value.
 
-3. Volumes declared that reference the PVs in each deployment that contains
-   containers referenced by the `containerVolumeTemplates.containers` key in the
-   KSCT config, with its settings merged-in from the `mergeSpec` key of the
-   volume template of the KSCT config.
+3. Volumes, declared in each deployment that contains a container that is
+   referenced by the `containerVolumeTemplates.containers` key in the
+   KSCT config, to reference the PVs; with the settings for each one merged-in
+   from the `mergeSpec` key of the volume template of the KSCT config.
 
-4. Volume mounts declared in each container that matches a name in the 
+4. Volume mounts, declared for each container that matches a name in the 
    `containerVolumeTemplates.containers` key of the KSCT config, with its
    settings merged-in from the `mergeSpec` key of the volume mount template of
    the KSCT config.
