@@ -1,0 +1,76 @@
+apiVersion: kubernetes.inveniem.com/storage-config-transformer/v1alpha
+kind: StorageConfigTransformer
+metadata:
+  name: storage-config-transformer
+  annotations:
+    config.kubernetes.io/function: |
+      container:
+        image: inveniem/kustomize-storage-transformer:latest
+spec:
+  - permutations:
+      values:
+        - sample-project1
+        - sample-project2
+        - sample-project3
+
+    persistentVolumeTemplate:
+      spec:
+        capacity:
+          storage: 1Ti
+        accessModes:
+          - ReadWriteMany
+        azureFile:
+          secretName: "myapp-azure-files-creds"
+          shareName: "<<INJECTED>>"
+      name:
+        prefix: "pv-myapp-live-"
+        suffix: ~
+      injectedValues:
+        - field: "spec.azureFile.shareName"
+          prefix: ~
+          suffix: ~
+
+    persistentVolumeClaimTemplate:
+      spec:
+        storageClassName: ""
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 1Ti
+        volumeName: "<<INJECTED>>"
+      name:
+        prefix: pvc-
+        suffix: ~
+      injectedValues:
+        - field: "spec.volumeName"
+          prefix: "pv-myapp-live-"
+          suffix: ~
+
+    containerVolumeTemplates:
+      - containers:
+          - name: frontend-myapp
+          - name: backend-myapp-api
+
+        volumeTemplates:
+          - mergeSpec:
+              persistentVolumeClaim:
+                claimName: "<<INJECTED>>"
+            name:
+              prefix: "vol-"
+              suffix: ~
+            injectedValues:
+              - field: "persistentVolumeClaim.claimName"
+                prefix: "pvc-"
+                suffix: ~
+
+        volumeMountTemplates:
+          - mergeSpec:
+              mountPath: "<<INJECTED>>"
+            name:
+              prefix: "vol-mnt-"
+              suffix: ~
+            injectedValues:
+              - field: "mountPath"
+                prefix: "/mnt/share/"
+                suffix: ~

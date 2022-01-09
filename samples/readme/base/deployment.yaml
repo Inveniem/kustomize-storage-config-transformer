@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-myapp-api
+  template:
+    metadata:
+      labels:
+        app: backend-myapp-api
+        role: backend
+    spec:
+      containers:
+        - name: backend-myapp-api
+          image: "inveniem/myapp-api:latest"
+          ports:
+            - containerPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-myapp
+  template:
+    metadata:
+      labels:
+        app: frontend-myapp
+        role: frontend
+    spec:
+      containers:
+        - name: frontend-myapp
+          image: "inveniem/frontend-myapp:latest"
+          ports:
+            - containerPort: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: some-other-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: some-other-app
+  template:
+    metadata:
+      labels:
+        app: some-other-app
+    spec:
+      containers:
+        - name: some-other-app
+          image: "inveniem/some-other-app:latest"
+          ports:
+            - containerPort: 5000
