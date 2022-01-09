@@ -401,7 +401,8 @@ class TransformStorageConfigCommand extends Command {
       'v1',
       $input_resources,
       $permutation_values,
-      $function_section_config
+      $function_section_config,
+      FALSE
     );
   }
 
@@ -441,7 +442,8 @@ class TransformStorageConfigCommand extends Command {
       'v1',
       $input_resources,
       $permutation_values,
-      $function_section_config
+      $function_section_config,
+      TRUE
     );
   }
 
@@ -689,8 +691,11 @@ class TransformStorageConfigCommand extends Command {
    * @param array $config_section
    *   Settings for how each resource will be generated, including its
    *   specification template, name template, and injected value templates.
+   * @param bool $supports_namespaces
+   *   Whether the resources being generated support namespacing or not.
    *
    * @return array
+   *   The resources generated from the config and permutation values.
    */
   protected function generateResourcesOfType(
       string $config_key,
@@ -698,15 +703,27 @@ class TransformStorageConfigCommand extends Command {
       string $resource_version,
       array $input_resources,
       array $permutation_values,
-      array $config_section): array {
+      array $config_section,
+      bool $supports_namespaces): array {
     $output_resources = $input_resources;
 
     $res_spec            = $config_section['spec'] ?? [];
     $res_injected_values = $config_section['injectedValues'] ?? [];
+    $res_namespace       = $config_section['namespace'] ?? NULL;
 
     if (empty($res_spec)) {
       throw new \InvalidArgumentException(
         sprintf('"%s.spec" key is missing or empty', $config_key)
+      );
+    }
+
+    if (!$supports_namespaces && !empty($res_namespace)) {
+      throw new \InvalidArgumentException(
+        sprintf(
+          '"%s.namespace" cannot be specified; "%s" resources do not support namespacing',
+          $config_key,
+          implode(':', [$resource_kind, $resource_version])
+        )
       );
     }
 
@@ -723,11 +740,18 @@ class TransformStorageConfigCommand extends Command {
       $new_res_name =
         $this->generateName($config_section, $permutation_value);
 
+      $new_res_metadata = ['name' => $new_res_name];
+
+      if ($supports_namespaces && !empty($res_namespace)) {
+        $new_res_metadata['namespace'] = $res_namespace;
+      }
+
       try {
+
         $new_res_object = new JsonObject([
           'kind'       => $resource_kind,
           'apiVersion' => $resource_version,
-          'metadata'   => ['name' => $new_res_name],
+          'metadata'   => $new_res_metadata,
           'spec'       => $res_spec,
         ]);
       }

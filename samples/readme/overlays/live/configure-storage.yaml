@@ -42,6 +42,7 @@ spec:
       name:
         prefix: pvc-
         suffix: ~
+      namespace: sample
       injectedValues:
         - field: "spec.volumeName"
           prefix: "pv-myapp-live-"

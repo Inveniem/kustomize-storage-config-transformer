@@ -141,6 +141,7 @@ spec:
       name:
         prefix: pvc-
         suffix: ~
+      namespace: sample
       injectedValues:
         - field: "spec.volumeName"
           prefix: "pv-myapp-live-"
@@ -225,6 +226,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pvc-sample-project1
+  namespace: sample
 spec:
   accessModes:
   - ReadWriteMany
@@ -238,6 +240,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pvc-sample-project2
+  namespace: sample
 spec:
   accessModes:
   - ReadWriteMany
@@ -251,6 +254,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: pvc-sample-project3
+  namespace: sample
 spec:
   accessModes:
   - ReadWriteMany
@@ -373,7 +377,8 @@ Note that the output manifests include the following:
    3. The share name is dynamically-injected based on the `injectedValues`
       settings in the KSCT config.
 
-2. A PVC is declared for each permutation value, with:
+2. A PVC (declared in the namespace in which the application is being
+   deployed) is declared for each permutation value, with:
    1. The name of each PVC prefixed according to the name prefix template.
    2. Each PVC bound to its corresponding PV via a dynamically-injected 
       `volumeName` attribute value.
