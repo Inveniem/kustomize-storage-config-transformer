@@ -311,7 +311,7 @@ class TransformStorageConfigCommand extends Command {
     if (empty($permutation_values)) {
       throw new \InvalidArgumentException(
         sprintf(
-          'No permutations provided under "spec.%s.%s" key in kustomize-storage-transformer plugin configuration. See plugin documentation.',
+          'No permutations provided under "spec.%s.%s" key',
           self::CONFIG_KEY_PERMUTATIONS,
           self::CONFIG_KEY_PERM_VALUES
         )
@@ -357,7 +357,7 @@ class TransformStorageConfigCommand extends Command {
     if (!$at_least_one_callback_invoked) {
       throw new \InvalidArgumentException(
         sprintf(
-          'At least one of [%s] must be provided under the "spec" key in kustomize-storage-transformer plugin configuration. See plugin documentation.',
+          'At least one of [%s] must be provided under the "spec" key',
           implode(', ', $config_keys)
         )
       );
@@ -436,7 +436,7 @@ class TransformStorageConfigCommand extends Command {
       array $permutation_values,
       array $function_section_config): array {
     return $this->generateResourcesOfType(
-      self::CONFIG_KEY_PVS,
+      self::CONFIG_KEY_PVCS,
       'PersistentVolumeClaim',
       'v1',
       $input_resources,
@@ -494,7 +494,7 @@ class TransformStorageConfigCommand extends Command {
       catch (\InvalidArgumentException $ex) {
         throw new \InvalidArgumentException(
           sprintf(
-            'Error while processing transformation for "%s[%d]" in kustomize-storage-transformer plugin configuration: %s. See plugin documentation.',
+            'Error while processing transformation for "%s[%d]": %s',
             self::CONFIG_KEY_CONTAINER_VOLUMES,
             $index,
             $ex->getMessage(),
@@ -553,7 +553,7 @@ class TransformStorageConfigCommand extends Command {
 
     if (empty($containers)) {
       throw new \InvalidArgumentException(
-        '"containerVolumeTemplates.containers" key is missing or empty.'
+        '"containerVolumeTemplates.containers" key is missing or empty'
       );
     }
 
@@ -706,7 +706,7 @@ class TransformStorageConfigCommand extends Command {
 
     if (empty($res_spec)) {
       throw new \InvalidArgumentException(
-        sprintf('"%s.spec" key is missing or empty.', $config_key)
+        sprintf('"%s.spec" key is missing or empty', $config_key)
       );
     }
 
@@ -781,17 +781,17 @@ class TransformStorageConfigCommand extends Command {
       array $config_sections): array {
     $resource_fragments = [];
 
-    foreach ($permutation_values as $index => $permutation_value) {
+    foreach ($permutation_values as $permutation_index => $permutation_value) {
       if (empty($permutation_value)) {
         throw new \InvalidArgumentException(
           sprintf(
             'Empty value encountered at "permutations.values[%d]"',
-            $index
+            $permutation_index
           )
         );
       }
 
-      foreach ($config_sections as $config_section) {
+      foreach ($config_sections as $config_index => $config_section) {
         $merge_spec      = $config_section['mergeSpec']      ?? [];
         $injected_values = $config_section['injectedValues'] ?? [];
 
@@ -810,7 +810,7 @@ class TransformStorageConfigCommand extends Command {
         }
 
         $this->applyInjectedValues(
-          sprintf('%s.mergeSpec', $config_key),
+          sprintf('%s[%d]', $config_key, $config_index),
           $permutation_value,
           $new_fragment_object,
           $injected_values
@@ -841,10 +841,7 @@ class TransformStorageConfigCommand extends Command {
 
       if (empty($target_container_name)) {
         throw new \InvalidArgumentException(
-          sprintf(
-            '"containers[%d].name" key is missing or empty.',
-            $index
-          )
+          sprintf('"containers[%d].name" key is missing or empty', $index)
         );
       }
 
