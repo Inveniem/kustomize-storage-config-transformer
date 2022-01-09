@@ -156,12 +156,28 @@ class TransformStorageConfigCommand extends Command {
 
       // NOTE: Until https://github.com/kubernetes-sigs/kustomize/issues/4321
       // gets addressed, you will not see error results output at all in the
-      // output in the event of an exception.
+      // event of an exception.
       $output_yaml = [
         'apiVersion' => self::SUPPORTED_RESOURCE_LIST_VERSION,
         'kind'       => self::SUPPORTED_RESOURCE_LIST_KIND,
-        'items'      => [],
-        'results'    => [
+        'items'      => [
+          // This is a kludge/workaround for the issue mentioned above. To
+          // ensure we can debug the input, we put the error output into the
+          // regular output. This can be removed when issue #4321 is resolved.
+          [
+            'apiVersion' => self::SUPPORTED_FUNC_CONFIG_VERSION,
+            'kind'       => 'ErrorReport',
+            'metadata' => [
+              'name' => 'error-report',
+            ],
+            'error' => [
+              'message'   => $exception_message,
+              'givenYaml' => $input_yaml ?? [],
+            ],
+          ],
+          // End kludge.
+        ],
+        'results' => [
           [
             'message'  => $exception_message,
             'severity' => 'error',
@@ -169,7 +185,11 @@ class TransformStorageConfigCommand extends Command {
         ],
       ];
 
-      $exit_code = 1;
+      // This is a kludge/workaround for the issue mentioned above. To
+      // ensure we can debug, we return success on failure. This can be removed
+      // when issue #4321 is resolved.
+      // $exit_code = 1;
+      $exit_code = 0;
     }
 
     $output_yaml_string = Yaml::dump($output_yaml, 10, 2);
