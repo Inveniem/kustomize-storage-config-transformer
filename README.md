@@ -31,6 +31,11 @@ spec:
           image: "inveniem/myapp-api:latest"
           ports:
             - containerPort: 5000
+        - name: some-other-app1
+          image: "inveniem/some-other-app1:latest"
+          ports:
+            - containerPort: 5000
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -56,20 +61,20 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: some-other-app
+  name: some-other-app2
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: some-other-app
+      app: some-other-app2
   template:
     metadata:
       labels:
-        app: some-other-app
+        app: some-other-app2
     spec:
       containers:
-        - name: some-other-app
-          image: "inveniem/some-other-app:latest"
+        - name: some-other-app2
+          image: "inveniem/some-other-app2:latest"
           ports:
             - containerPort: 5000
 ```
