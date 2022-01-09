@@ -88,6 +88,8 @@ kind: Kustomization
 resources:
   - ../../base
 
+namespace: sample
+
 transformers:
   - configure-storage.yaml
 ```
@@ -262,6 +264,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: frontend-myapp
+  namespace: sample
 spec:
   replicas: 1
   selector:
@@ -300,6 +303,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: myapp-api
+  namespace: sample
 spec:
   replicas: 2
   selector:
@@ -342,6 +346,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: some-other-app2
+  namespace: sample
 spec:
   replicas: 1
   selector:
@@ -368,8 +373,7 @@ Note that the output manifests include the following:
    3. The share name is dynamically-injected based on the `injectedValues`
       settings in the KSCT config.
 
-2. A PVC (declared in the namespace in which the application is being
-   deployed) is declared for each permutation value, with:
+2. A PVC is declared for each permutation value, with:
    1. The name of each PVC prefixed according to the name prefix template.
    2. Each PVC bound to its corresponding PV via a dynamically-injected 
       `volumeName` attribute value.
