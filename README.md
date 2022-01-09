@@ -183,119 +183,80 @@ This would produce the following deployment manifest:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: "pv-myapp-live-sample-project1"
+  name: pv-myapp-live-sample-project1
 spec:
+  accessModes:
+  - ReadWriteMany
+  azureFile:
+    secretName: myapp-azure-files-creds
+    shareName: sample-project1
   capacity:
     storage: 1Ti
-  accessModes:
-    - ReadWriteMany
-  azureFile:
-    secretName: "myapp-azure-files-creds"
-    shareName: "sample-project1"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: "pvc-sample-project1"
-spec:
-  storageClassName: ""
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Ti
-  volumeName: "pv-myapp-live-sample-project1"
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: "pv-myapp-live-sample-project2"
+  name: pv-myapp-live-sample-project2
 spec:
+  accessModes:
+  - ReadWriteMany
+  azureFile:
+    secretName: myapp-azure-files-creds
+    shareName: sample-project2
   capacity:
     storage: 1Ti
-  accessModes:
-    - ReadWriteMany
-  azureFile:
-    secretName: "myapp-azure-files-creds"
-    shareName: "sample-project2"
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: "pvc-sample-project2"
-spec:
-  storageClassName: ""
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Ti
-  volumeName: "pv-myapp-live-sample-project2"
 ---
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: "pv-myapp-live-sample-project3"
+  name: pv-myapp-live-sample-project3
 spec:
+  accessModes:
+  - ReadWriteMany
+  azureFile:
+    secretName: myapp-azure-files-creds
+    shareName: sample-project3
   capacity:
     storage: 1Ti
-  accessModes:
-    - ReadWriteMany
-  azureFile:
-    secretName: "myapp-azure-files-creds"
-    shareName: "sample-project3"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: "pvc-sample-project3"
+  name: pvc-sample-project1
 spec:
-  storageClassName: ""
   accessModes:
-    - ReadWriteMany
+  - ReadWriteMany
   resources:
     requests:
       storage: 1Ti
-  volumeName: "pv-myapp-live-sample-project3"
+  storageClassName: ""
+  volumeName: pv-myapp-live-sample-project1
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: myapp-api
+  name: pvc-sample-project2
 spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: backend-myapp-api
-  template:
-    metadata:
-      labels:
-        app: backend-myapp-api
-        role: backend
-    spec:
-      volumes:
-        - name: "vol-sample-project1"
-          persistentVolumeClaim:
-            claimName: "pvc-sample-project1"
-        - name: "vol-sample-project2"
-          persistentVolumeClaim:
-            claimName: "pvc-sample-project2"
-        - name: "vol-sample-project3"
-          persistentVolumeClaim:
-            claimName: "pvc-sample-project3"
-      containers:
-        - name: backend-myapp-api
-          image: "inveniem/myapp-api:latest"
-          ports:
-            - containerPort: 5000
-          volumeMounts:
-            - mountPath: "/mnt/share/sample-project1"
-              name: "vol-mnt-sample-project1"
-            - mountPath: "/mnt/share/sample-project2"
-              name: "vol-mnt-sample-project2"
-            - mountPath: "/mnt/share/sample-project3"
-              name: "vol-mnt-sample-project3"
-
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Ti
+  storageClassName: ""
+  volumeName: pv-myapp-live-sample-project2
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-sample-project3
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Ti
+  storageClassName: ""
+  volumeName: pv-myapp-live-sample-project3
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -312,48 +273,90 @@ spec:
         app: frontend-myapp
         role: frontend
     spec:
-      volumes:
-        - name: "vol-sample-project1"
-          persistentVolumeClaim:
-            claimName: "pvc-sample-project1"
-        - name: "vol-sample-project2"
-          persistentVolumeClaim:
-            claimName: "pvc-sample-project2"
-        - name: "vol-sample-project3"
-          persistentVolumeClaim:
-            claimName: "pvc-sample-project3"
       containers:
-        - name: frontend-myapp
-          image: "inveniem/frontend-myapp:latest"
-          ports:
-            - containerPort: 5000
-          volumeMounts:
-            - mountPath: "/mnt/share/sample-project1"
-              name: "vol-mnt-sample-project1"
-            - mountPath: "/mnt/share/sample-project2"
-              name: "vol-mnt-sample-project2"
-            - mountPath: "/mnt/share/sample-project3"
-              name: "vol-mnt-sample-project3"
+      - image: inveniem/frontend-myapp:latest
+        name: frontend-myapp
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - mountPath: /mnt/share/sample-project1
+          name: vol-mnt-sample-project1
+        - mountPath: /mnt/share/sample-project2
+          name: vol-mnt-sample-project2
+        - mountPath: /mnt/share/sample-project3
+          name: vol-mnt-sample-project3
+      volumes:
+      - name: vol-sample-project1
+        persistentVolumeClaim:
+          claimName: pvc-sample-project1
+      - name: vol-sample-project2
+        persistentVolumeClaim:
+          claimName: pvc-sample-project2
+      - name: vol-sample-project3
+        persistentVolumeClaim:
+          claimName: pvc-sample-project3
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: some-other-app
+  name: myapp-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-myapp-api
+  template:
+    metadata:
+      labels:
+        app: backend-myapp-api
+        role: backend
+    spec:
+      containers:
+      - image: inveniem/myapp-api:latest
+        name: backend-myapp-api
+        ports:
+        - containerPort: 5000
+        volumeMounts:
+        - mountPath: /mnt/share/sample-project1
+          name: vol-mnt-sample-project1
+        - mountPath: /mnt/share/sample-project2
+          name: vol-mnt-sample-project2
+        - mountPath: /mnt/share/sample-project3
+          name: vol-mnt-sample-project3
+      - image: inveniem/some-other-app1:latest
+        name: some-other-app1
+        ports:
+        - containerPort: 5000
+      volumes:
+      - name: vol-sample-project1
+        persistentVolumeClaim:
+          claimName: pvc-sample-project1
+      - name: vol-sample-project2
+        persistentVolumeClaim:
+          claimName: pvc-sample-project2
+      - name: vol-sample-project3
+        persistentVolumeClaim:
+          claimName: pvc-sample-project3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: some-other-app2
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: some-other-app
+      app: some-other-app2
   template:
     metadata:
       labels:
-        app: some-other-app
+        app: some-other-app2
     spec:
       containers:
-        - name: some-other-app
-          image: "inveniem/some-other-app:latest"
-          ports:
-            - containerPort: 5000
+      - image: inveniem/some-other-app2:latest
+        name: some-other-app2
+        ports:
+        - containerPort: 5000
 ```
 
 Note that the output manifests include the following:
