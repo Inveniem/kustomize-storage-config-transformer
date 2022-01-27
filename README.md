@@ -168,7 +168,7 @@ spec:
           - mergeSpec:
               mountPath: "<<INJECTED>>"
             name:
-              prefix: "vol-mnt-"
+              prefix: "vol-"
               suffix: ~
             injectedValues:
               - field: "mountPath"
@@ -287,11 +287,11 @@ spec:
         - containerPort: 5000
         volumeMounts:
         - mountPath: /mnt/share/sample-project1
-          name: vol-mnt-sample-project1
+          name: vol-sample-project1
         - mountPath: /mnt/share/sample-project2
-          name: vol-mnt-sample-project2
+          name: vol-sample-project2
         - mountPath: /mnt/share/sample-project3
-          name: vol-mnt-sample-project3
+          name: vol-sample-project3
       volumes:
       - name: vol-sample-project1
         persistentVolumeClaim:
@@ -326,11 +326,11 @@ spec:
         - containerPort: 5000
         volumeMounts:
         - mountPath: /mnt/share/sample-project1
-          name: vol-mnt-sample-project1
+          name: vol-sample-project1
         - mountPath: /mnt/share/sample-project2
-          name: vol-mnt-sample-project2
+          name: vol-sample-project2
         - mountPath: /mnt/share/sample-project3
-          name: vol-mnt-sample-project3
+          name: vol-sample-project3
       - image: inveniem/some-other-app1:latest
         name: some-other-app1
         ports:

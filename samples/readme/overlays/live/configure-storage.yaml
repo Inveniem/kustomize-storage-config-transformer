@@ -69,7 +69,7 @@ spec:
           - mergeSpec:
               mountPath: "<<INJECTED>>"
             name:
-              prefix: "vol-mnt-"
+              prefix: "vol-"
               suffix: ~
             injectedValues:
               - field: "mountPath"
