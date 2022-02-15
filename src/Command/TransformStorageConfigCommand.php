@@ -278,8 +278,8 @@ class TransformStorageConfigCommand extends Command {
           sprintf(
             'Error while processing transformation for "spec[%d]" in kustomize-storage-transformer plugin configuration: %s. See plugin documentation.',
             $index,
-            $ex->getMessage(),
-          ),
+            $ex->getMessage()
+          )
         );
       }
     }
@@ -499,8 +499,8 @@ class TransformStorageConfigCommand extends Command {
             'Error while processing transformation for "%s[%d]": %s',
             self::CONFIG_KEY_CONTAINER_VOLUMES,
             $index,
-            $ex->getMessage(),
-          ),
+            $ex->getMessage()
+          )
         );
       }
     }
