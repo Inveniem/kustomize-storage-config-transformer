@@ -125,7 +125,10 @@ spec:
         prefix: "pv-myapp-live-"
         suffix: ~
       injectedValues:
-        - field: "spec.azureFile.shareName"
+        # "targetField" is the new name for "field" from v1.0.0. Both "field"
+        # and "targetField" are allowed are allowed in v1.1.0+, but 
+        # "targetField" will be supported as the clearer option going forward.
+        - targetField: "spec.azureFile.shareName"
           prefix: ~
           suffix: ~
 
@@ -143,7 +146,10 @@ spec:
         suffix: ~
       namespace: sample
       injectedValues:
-        - field: "spec.volumeName"
+        # "targetField" is the new name for "field" from v1.0.0. Both "field"
+        # and "targetField" are allowed are allowed in v1.1.0+, but 
+        # "targetField" will be supported as the clearer option going forward.
+        - targetField: "spec.volumeName"
           prefix: "pv-myapp-live-"
           suffix: ~
 
@@ -160,7 +166,11 @@ spec:
               prefix: "vol-"
               suffix: ~
             injectedValues:
-              - field: "persistentVolumeClaim.claimName"
+              # "targetField" is the new name for "field" from v1.0.0. Both 
+              # "field" and "targetField" are allowed in v1.1.0+, but 
+              # "targetField" will be supported as the clearer option going 
+              # forward.
+              - targetField: "persistentVolumeClaim.claimName"
                 prefix: "pvc-"
                 suffix: ~
 
@@ -171,7 +181,11 @@ spec:
               prefix: "vol-"
               suffix: ~
             injectedValues:
-              - field: "mountPath"
+              # "targetField" is the new name for "field" from v1.0.0. Both 
+              # "field" and "targetField" are allowed in v1.1.0+, but 
+              # "targetField" will be supported as the clearer option going 
+              # forward.
+              - targetField: "mountPath"
                 prefix: "/mnt/share/"
                 suffix: ~
 ```

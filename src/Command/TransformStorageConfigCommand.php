@@ -915,14 +915,29 @@ class TransformStorageConfigCommand extends Command {
                                          JsonObject $res_object,
                                          array $injected_values_config): void {
     foreach ($injected_values_config as $value_index => $injected_value) {
-      $field_path   = $injected_value['field']  ?? NULL;
+      $target_field_path = $injected_value['targetField']  ?? NULL;
+
+      // 'field' is the deprecated name, but we maintain it for backwards
+      // compatibility.
+      $field_path = $injected_value['field'] ?? NULL;
+
       $field_prefix = $injected_value['prefix'] ?? '';
       $field_suffix = $injected_value['suffix'] ?? '';
 
-      if (empty($field_path)) {
+      if (($target_field_path !== NULL) && ($field_path !== NULL)) {
         throw new \InvalidArgumentException(
           sprintf(
-            'Missing or empty "field" key for "%s.injectedValues[%d]"',
+            'For "%s.injectedValues[%d]": Only "targetField" should be specified. The "field" key has been replaced by "targetField" and "field" is now deprecated.',
+            $config_key,
+            $value_index
+          )
+        );
+      }
+
+      if (empty($target_field_path)) {
+        throw new \InvalidArgumentException(
+          sprintf(
+            'Missing or empty "targetField" key for "%s.injectedValues[%d]"',
             $config_key,
             $value_index
           )
@@ -932,7 +947,7 @@ class TransformStorageConfigCommand extends Command {
       $field_value =
         implode('', [$field_prefix, $permutation_value, $field_suffix]);
 
-      $json_path = '$.' . $field_path;
+      $json_path = '$.' . $target_field_path;
 
       $res_object->set($json_path, $field_value);
     }
