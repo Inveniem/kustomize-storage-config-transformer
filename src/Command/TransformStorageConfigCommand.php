@@ -109,7 +109,11 @@ class TransformStorageConfigCommand extends Command {
     'Deployment:apps/v1' => [
       'containersPath' => '$.spec.template.spec.containers',
       'volumesPath'    => '$.spec.template.spec.volumes',
-    ]
+    ],
+    'CronJob:batch/v1' => [
+      'containersPath' => '$.spec.jobTemplate.spec.template.spec.containers',
+      'volumesPath'    => '$.spec.jobTemplate.spec.template.spec.volumes',
+    ],
   ];
 
   /**
@@ -915,29 +919,29 @@ class TransformStorageConfigCommand extends Command {
                                          JsonObject $res_object,
                                          array $injected_values_config): void {
     foreach ($injected_values_config as $value_index => $injected_value) {
-      $target_field_path = $injected_value['targetField']  ?? NULL;
-
       // 'field' is the deprecated name, but we maintain it for backwards
       // compatibility.
       $field_path = $injected_value['field'] ?? NULL;
 
+      $target_field_path = $injected_value['targetField']  ?? $field_path;
+
       $field_prefix = $injected_value['prefix'] ?? '';
       $field_suffix = $injected_value['suffix'] ?? '';
 
-      if (($target_field_path !== NULL) && ($field_path !== NULL)) {
+      if (empty($target_field_path)) {
         throw new \InvalidArgumentException(
           sprintf(
-            'For "%s.injectedValues[%d]": Only "targetField" should be specified. The "field" key has been replaced by "targetField" and "field" is now deprecated.',
+            'Missing or empty "targetField" key for "%s.injectedValues[%d]"',
             $config_key,
             $value_index
           )
         );
       }
 
-      if (empty($target_field_path)) {
+      if (($field_path !== NULL) && ($target_field_path !== $field_path)) {
         throw new \InvalidArgumentException(
           sprintf(
-            'Missing or empty "targetField" key for "%s.injectedValues[%d]"',
+            'For "%s.injectedValues[%d]": Only "targetField" should be specified. The "field" key has been replaced by "targetField" and "field" is now deprecated.',
             $config_key,
             $value_index
           )
