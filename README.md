@@ -111,7 +111,7 @@ spec:
         - sample-project1
         - sample-project2
         - sample-project3
-            
+
     persistentVolumeTemplate:
       spec:
         capacity:
@@ -126,8 +126,9 @@ spec:
         suffix: ~
       injectedValues:
         # "targetField" is the new name for "field" from v1.0.0. Both "field"
-        # and "targetField" are allowed are allowed in v1.1.0+, but 
-        # "targetField" will be supported as the clearer option going forward.
+        # and "targetField" are allowed in v1.1.0+, but "field" is deprecated 
+        # and "targetField" will be supported as the clearer option going
+        # forward.
         - targetField: "spec.azureFile.shareName"
           prefix: ~
           suffix: ~
@@ -147,8 +148,9 @@ spec:
       namespace: sample
       injectedValues:
         # "targetField" is the new name for "field" from v1.0.0. Both "field"
-        # and "targetField" are allowed are allowed in v1.1.0+, but 
-        # "targetField" will be supported as the clearer option going forward.
+        # and "targetField" are allowed in v1.1.0+, but "field" is deprecated 
+        # and "targetField" will be supported as the clearer option going
+        # forward.
         - targetField: "spec.volumeName"
           prefix: "pv-myapp-live-"
           suffix: ~
@@ -203,7 +205,7 @@ metadata:
   name: pv-myapp-live-sample-project1
 spec:
   accessModes:
-  - ReadWriteMany
+    - ReadWriteMany
   azureFile:
     secretName: myapp-azure-files-creds
     shareName: sample-project1
@@ -216,7 +218,7 @@ metadata:
   name: pv-myapp-live-sample-project2
 spec:
   accessModes:
-  - ReadWriteMany
+    - ReadWriteMany
   azureFile:
     secretName: myapp-azure-files-creds
     shareName: sample-project2
@@ -229,7 +231,7 @@ metadata:
   name: pv-myapp-live-sample-project3
 spec:
   accessModes:
-  - ReadWriteMany
+    - ReadWriteMany
   azureFile:
     secretName: myapp-azure-files-creds
     shareName: sample-project3
@@ -243,7 +245,7 @@ metadata:
   namespace: sample
 spec:
   accessModes:
-  - ReadWriteMany
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Ti
@@ -257,7 +259,7 @@ metadata:
   namespace: sample
 spec:
   accessModes:
-  - ReadWriteMany
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Ti
@@ -271,7 +273,7 @@ metadata:
   namespace: sample
 spec:
   accessModes:
-  - ReadWriteMany
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Ti
@@ -295,27 +297,27 @@ spec:
         role: frontend
     spec:
       containers:
-      - image: inveniem/frontend-myapp:latest
-        name: frontend-myapp
-        ports:
-        - containerPort: 5000
-        volumeMounts:
-        - mountPath: /mnt/share/sample-project1
-          name: vol-sample-project1
-        - mountPath: /mnt/share/sample-project2
-          name: vol-sample-project2
-        - mountPath: /mnt/share/sample-project3
-          name: vol-sample-project3
+        - image: inveniem/frontend-myapp:latest
+          name: frontend-myapp
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - mountPath: /mnt/share/sample-project1
+              name: vol-sample-project1
+            - mountPath: /mnt/share/sample-project2
+              name: vol-sample-project2
+            - mountPath: /mnt/share/sample-project3
+              name: vol-sample-project3
       volumes:
-      - name: vol-sample-project1
-        persistentVolumeClaim:
-          claimName: pvc-sample-project1
-      - name: vol-sample-project2
-        persistentVolumeClaim:
-          claimName: pvc-sample-project2
-      - name: vol-sample-project3
-        persistentVolumeClaim:
-          claimName: pvc-sample-project3
+        - name: vol-sample-project1
+          persistentVolumeClaim:
+            claimName: pvc-sample-project1
+        - name: vol-sample-project2
+          persistentVolumeClaim:
+            claimName: pvc-sample-project2
+        - name: vol-sample-project3
+          persistentVolumeClaim:
+            claimName: pvc-sample-project3
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -334,31 +336,31 @@ spec:
         role: backend
     spec:
       containers:
-      - image: inveniem/myapp-api:latest
-        name: backend-myapp-api
-        ports:
-        - containerPort: 5000
-        volumeMounts:
-        - mountPath: /mnt/share/sample-project1
-          name: vol-sample-project1
-        - mountPath: /mnt/share/sample-project2
-          name: vol-sample-project2
-        - mountPath: /mnt/share/sample-project3
-          name: vol-sample-project3
-      - image: inveniem/some-other-app1:latest
-        name: some-other-app1
-        ports:
-        - containerPort: 5000
+        - image: inveniem/myapp-api:latest
+          name: backend-myapp-api
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - mountPath: /mnt/share/sample-project1
+              name: vol-sample-project1
+            - mountPath: /mnt/share/sample-project2
+              name: vol-sample-project2
+            - mountPath: /mnt/share/sample-project3
+              name: vol-sample-project3
+        - image: inveniem/some-other-app1:latest
+          name: some-other-app1
+          ports:
+            - containerPort: 5000
       volumes:
-      - name: vol-sample-project1
-        persistentVolumeClaim:
-          claimName: pvc-sample-project1
-      - name: vol-sample-project2
-        persistentVolumeClaim:
-          claimName: pvc-sample-project2
-      - name: vol-sample-project3
-        persistentVolumeClaim:
-          claimName: pvc-sample-project3
+        - name: vol-sample-project1
+          persistentVolumeClaim:
+            claimName: pvc-sample-project1
+        - name: vol-sample-project2
+          persistentVolumeClaim:
+            claimName: pvc-sample-project2
+        - name: vol-sample-project3
+          persistentVolumeClaim:
+            claimName: pvc-sample-project3
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -376,33 +378,33 @@ spec:
         app: some-other-app2
     spec:
       containers:
-      - image: inveniem/some-other-app2:latest
-        name: some-other-app2
-        ports:
-        - containerPort: 5000
+        - image: inveniem/some-other-app2:latest
+          name: some-other-app2
+          ports:
+            - containerPort: 5000
 ```
 
 Note that the output manifests include the following:
 1. A PV (available cluster-wide) is declared for each permutation value (e.g.,
    `sample-project1`, `sample-project2`, etc.), with:
-   1. Each name prefixed according to the name prefix template.
-   2. The specification (`spec`) for each PV is copied from the 
-      `persistentVolumeTemplate` from the KSCT config.
-   3. The share name is dynamically-injected based on the `injectedValues`
-      settings in the KSCT config.
+    1. Each name prefixed according to the name prefix template.
+    2. The specification (`spec`) for each PV is copied from the
+       `persistentVolumeTemplate` from the KSCT config.
+    3. The share name is dynamically-injected based on the `injectedValues`
+       settings in the KSCT config.
 
 2. A PVC (declared in the namespace in which the application is being
    deployed) is declared for each permutation value, with:
-   1. The name of each PVC prefixed according to the name prefix template.
-   2. Each PVC bound to its corresponding PV via a dynamically-injected 
-      `volumeName` attribute value.
+    1. The name of each PVC prefixed according to the name prefix template.
+    2. Each PVC bound to its corresponding PV via a dynamically-injected
+       `volumeName` attribute value.
 
 3. Volumes, declared in each deployment that contains a container that is
    referenced by the `containerVolumeTemplates.containers` key in the
    KSCT config, to reference the PVs; with the settings for each one merged-in
    from the `mergeSpec` key of the volume template of the KSCT config.
 
-4. Volume mounts, declared for each container that matches a name in the 
+4. Volume mounts, declared for each container that matches a name in the
    `containerVolumeTemplates.containers` key of the KSCT config, with its
    settings merged-in from the `mergeSpec` key of the volume mount template of
    the KSCT config.
