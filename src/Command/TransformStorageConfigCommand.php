@@ -742,7 +742,7 @@ class TransformStorageConfigCommand extends Command {
       }
 
       $new_res_name =
-        $this->generateName($config_section, $permutation_value);
+        $this->generateName($config_key, $config_section, $permutation_value);
 
       $new_res_metadata = ['name' => $new_res_name];
 
@@ -824,7 +824,7 @@ class TransformStorageConfigCommand extends Command {
         $injected_values = $config_section['injectedValues'] ?? [];
 
         $new_fragment_name =
-          $this->generateName($config_section, $permutation_value);
+          $this->generateName($config_key, $config_section, $permutation_value);
 
         $new_fragment_array =
           array_merge(['name' => $new_fragment_name], $merge_spec);
@@ -880,24 +880,181 @@ class TransformStorageConfigCommand extends Command {
   }
 
   /**
-   * Generates a name from settings that include the name prefix and suffix.
+   * Generates a name from a config section that includes template settings.
    *
+   * The settings can include a prefix, a suffix, and replacements (regular
+   * expressions).
+   *
+   * The prefix, suffix, and replacements are all optional. The permutation is
+   * sandwiched in between the prefix and suffix and then the result is run
+   * through each of the replacements in the order that they appear.
+   *
+   * For example, given the following inputs:
+   *
+   * @code
+   * $config_section = [
+   *   'name' => [
+   *     'prefix' => 'start-',
+   *     'suffix' => '-end',
+   *     'replacements' => [
+   *       [
+   *         'pattern'     => '/\-/',
+   *         'replacement' => '/',
+   *       ],
+   *       [
+   *         'pattern'     => '/:to\/replace/',
+   *         'replacement' => '-to-use-as-an-example',
+   *       ],
+   *     ],
+   *   ],
+   * ];
+   *
+   * $permutation_value = 'some-value:to-replace'
+   * @endcode
+   *
+   * The following name would result:
+   * @code
+   * start/some/value-to-use-as-an-example/end
+   * @endcode
+   *
+   * @param string $config_key
+   *   The name of the configuration key that provides the template for the
+   *   invoking resource. This is used only for error reporting.
    * @param array $config_section
-   *   The configuration section containing the name template settings.
+   *   The configuration section containing the name template settings under a
+   *   "name" key. The template settings are an associative array that can
+   *   contain the following keys:
+   *     - prefix: Optional text to put at the start of the value.
+   *     - suffix: Optional text to put at the end of the value.
+   *     - replacements: An optional, indexed array of regex-based replacements
+   *       that will be applied in the order that they appear. Each item is an
+   *       array containing the following keys:
+   *         - pattern: A regular expression to apply to the value.
+   *         - replacement: The value to replace each match with. Can contain
+   *           values matched by capture groups.
    * @param string $permutation_value
    *   The current permutation for which a name is being generated.
    *
    * @return string
    *   The name generated from the permutation.
    */
-  protected function generateName(array $config_section,
+  protected function generateName(string $config_key,
+                                  array $config_section,
                                   string $permutation_value): string {
     $res_name_template = $config_section['name'] ?? [];
 
-    $name_prefix   = $res_name_template['prefix'] ?? '';
-    $name_suffix   = $res_name_template['suffix'] ?? '';
+    return $this->generateValueFromTemplate(
+      "{$config_key}.name",
+      $res_name_template,
+      $permutation_value
+    );
+  }
 
-    return implode('', [$name_prefix, $permutation_value, $name_suffix]);
+  /**
+   * Generates a value from template settings.
+   *
+   * The settings can include a prefix, a suffix, and replacements (regular
+   * expressions).
+   *
+   * The prefix, suffix, and replacements are all optional. The permutation is
+   * sandwiched in between the prefix and suffix and then the result is run
+   * through each of the replacements in the order that they appear.
+   *
+   * For example, given the following inputs:
+   *
+   * @code
+   * $config_section = [
+   *   'prefix' => 'start-',
+   *   'suffix' => '-end',
+   *   'replacements' => [
+   *     [
+   *       'pattern'     => '/\-/',
+   *       'replacement' => '/',
+   *     ],
+   *     [
+   *       'pattern'     => '/:to\/replace/',
+   *       'replacement' => '-to-use-as-an-example',
+   *     ],
+   *   ],
+   * ];
+   *
+   * $source_value = 'some-value:to-replace'
+   * @endcode
+   *
+   * The following name would result:
+   * @code
+   * start/some/value-to-use-as-an-example/end
+   * @endcode
+   *
+   * @param string $config_key
+   *   The name of the configuration key that provides the template for the
+   *   invoking resource. This is used only for error reporting.
+   * @param array $template
+   *   The template settings to apply to the permutation to generate the value.
+   *   This is an associative array that can contain the following keys:
+   *     - prefix: Optional text to put at the start of the value.
+   *     - suffix: Optional text to put at the end of the value.
+   *     - replacements: An optional, indexed array of regex-based replacements
+   *       that will be applied in the order that they appear. Each item is an
+   *       array containing the following keys:
+   *         - pattern: A regular expression to apply to the value.
+   *         - replacement: The value to replace each match with. Can contain
+   *           values matched by capture groups.
+   * @param string $permutation_value
+   *   The current permutation for which a value is being generated.
+   *
+   * @return string
+   *   The value generated from applying the template to the permutation.
+   */
+  protected function generateValueFromTemplate(
+      string $config_key,
+      array $template,
+      string $permutation_value): string {
+    $name_prefix       = $template['prefix'] ?? '';
+    $name_suffix       = $template['suffix'] ?? '';
+    $name_replacements = $template['replacements'] ?? [];
+
+    $raw_name = implode('', [$name_prefix, $permutation_value, $name_suffix]);
+
+    if (empty($name_replacements)) {
+      $name = $raw_name;
+    }
+    else {
+      $patterns     = [];
+      $replacements = [];
+
+      foreach ($name_replacements as $value_index => $replacement_config) {
+        $pattern     = $replacement_config['pattern'] ?? NULL;
+        $replacement = $replacement_config['replacement'] ?? NULL;
+
+        if ($pattern === NULL) {
+          throw new \InvalidArgumentException(
+            sprintf(
+              'Missing or null "pattern" key for "%s.replacements[%d]"',
+              $config_key,
+              $value_index
+            )
+          );
+        }
+
+        if ($replacement === NULL) {
+          throw new \InvalidArgumentException(
+            sprintf(
+              'Missing or null "replacement" key for "%s.replacements[%d]"',
+              $config_key,
+              $value_index
+            )
+          );
+        }
+
+        $patterns[]     = $pattern;
+        $replacements[] = $replacement;
+      }
+
+      $name = preg_replace($patterns, $replacements, $raw_name);
+    }
+
+    return $name;
   }
 
   /**
@@ -923,10 +1080,7 @@ class TransformStorageConfigCommand extends Command {
       // compatibility.
       $field_path = $injected_value['field'] ?? NULL;
 
-      $target_field_path = $injected_value['targetField']  ?? $field_path;
-
-      $field_prefix = $injected_value['prefix'] ?? '';
-      $field_suffix = $injected_value['suffix'] ?? '';
+      $target_field_path = $injected_value['targetField'] ?? $field_path;
 
       if (empty($target_field_path)) {
         throw new \InvalidArgumentException(
@@ -949,7 +1103,11 @@ class TransformStorageConfigCommand extends Command {
       }
 
       $field_value =
-        implode('', [$field_prefix, $permutation_value, $field_suffix]);
+        $this->generateValueFromTemplate(
+          sprintf("%s.injectedValues[%d]", $config_key, $value_index),
+          $injected_value,
+          $permutation_value
+        );
 
       $json_path = '$.' . $target_field_path;
 

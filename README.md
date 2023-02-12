@@ -145,6 +145,9 @@ spec:
       name:
         prefix: pvc-
         suffix: ~
+        replacements:
+          - pattern: '/sample\-/'
+            replacement: ''
       namespace: sample
       injectedValues:
         # "targetField" is the new name for "field" from v1.0.0. Both "field"
@@ -175,6 +178,9 @@ spec:
               - targetField: "persistentVolumeClaim.claimName"
                 prefix: "pvc-"
                 suffix: ~
+                replacements:
+                  - pattern: '/sample\-/'
+                    replacement: ''
 
         volumeMountTemplates:
           - mergeSpec:
@@ -190,6 +196,9 @@ spec:
               - targetField: "mountPath"
                 prefix: "/mnt/share/"
                 suffix: ~
+                replacements:
+                  - pattern: '/\-/'
+                    replacement: '/'
 ```
 _(Above, there is nothing special about `<<INJECTED>>` as a value; it's just
 being used to make it easier to visualize where the injected values will go in
@@ -241,7 +250,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-sample-project1
+  name: pvc-project1
   namespace: sample
 spec:
   accessModes:
@@ -255,7 +264,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-sample-project2
+  name: pvc-project2
   namespace: sample
 spec:
   accessModes:
@@ -269,7 +278,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-sample-project3
+  name: pvc-project3
   namespace: sample
 spec:
   accessModes:
@@ -302,22 +311,22 @@ spec:
           ports:
             - containerPort: 5000
           volumeMounts:
-            - mountPath: /mnt/share/sample-project1
+            - mountPath: /mnt/share/sample/project1
               name: vol-sample-project1
-            - mountPath: /mnt/share/sample-project2
+            - mountPath: /mnt/share/sample/project2
               name: vol-sample-project2
-            - mountPath: /mnt/share/sample-project3
+            - mountPath: /mnt/share/sample/project3
               name: vol-sample-project3
       volumes:
         - name: vol-sample-project1
           persistentVolumeClaim:
-            claimName: pvc-sample-project1
+            claimName: pvc-project1
         - name: vol-sample-project2
           persistentVolumeClaim:
-            claimName: pvc-sample-project2
+            claimName: pvc-project2
         - name: vol-sample-project3
           persistentVolumeClaim:
-            claimName: pvc-sample-project3
+            claimName: pvc-project3
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -341,11 +350,11 @@ spec:
           ports:
             - containerPort: 5000
           volumeMounts:
-            - mountPath: /mnt/share/sample-project1
+            - mountPath: /mnt/share/sample/project1
               name: vol-sample-project1
-            - mountPath: /mnt/share/sample-project2
+            - mountPath: /mnt/share/sample/project2
               name: vol-sample-project2
-            - mountPath: /mnt/share/sample-project3
+            - mountPath: /mnt/share/sample/project3
               name: vol-sample-project3
         - image: inveniem/some-other-app1:latest
           name: some-other-app1
@@ -354,13 +363,13 @@ spec:
       volumes:
         - name: vol-sample-project1
           persistentVolumeClaim:
-            claimName: pvc-sample-project1
+            claimName: pvc-project1
         - name: vol-sample-project2
           persistentVolumeClaim:
-            claimName: pvc-sample-project2
+            claimName: pvc-project2
         - name: vol-sample-project3
           persistentVolumeClaim:
-            claimName: pvc-sample-project3
+            claimName: pvc-project3
 ---
 apiVersion: apps/v1
 kind: Deployment
